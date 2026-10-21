@@ -118,9 +118,15 @@ final class LivePanel: NSPanel {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key); item.target = self; return item
     }
     func menuWillOpen(_ menu: NSMenu) {
-        menuTitle?.title = model.selectedMatch.map { "\($0.title) · \($0.status)" } ?? "余光 · 安静地看一场球"
+        updateMenuTitle()
+    }
+    private func updateMenuTitle() {
+        menuTitle?.title = model.selectedMatch.map {
+            "\($0.awayTeamName) \($0.score) \($0.homeTeamName) · \($0.status)"
+        } ?? "余光 · 安静地看一场球"
     }
     private func updateStatus() {
+        updateMenuTitle()
         if model.menuScore, let match = model.selectedMatch {
             statusItem?.button?.title = " \(match.awayTeamName) \(match.score) \(match.homeTeamName)"
             statusItem?.button?.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
