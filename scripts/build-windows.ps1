@@ -11,4 +11,5 @@ $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
 if (!(Test-Path $iscc)) { throw 'Inno Setup 6 is required to build the installer' }
 & $iscc "/DAppVersion=$Version" "/DPublishDir=$publish" "/DOutputDir=$root/release" "$PSScriptRoot/windows-installer.iss"
 if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
-Get-ChildItem "release/Yuguang-$Version-windows-x64-*.exe" | ForEach-Object { $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); "$hash  $($_.Name)" } | Set-Content "release/Yuguang-$Version-windows-x64.sha256" -Encoding ascii
+$checksums = Get-ChildItem "release/Yuguang-$Version-windows-x64-*.exe" | ForEach-Object { $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); "$hash  $($_.Name)" }
+[IO.File]::WriteAllText((Join-Path $root "release/Yuguang-$Version-windows-x64.sha256"), (($checksums -join "`n") + "`n"), [Text.Encoding]::ASCII)

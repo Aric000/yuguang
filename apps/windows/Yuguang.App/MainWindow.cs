@@ -51,7 +51,7 @@ public sealed class MainWindow : Window
         tray.ContextMenuStrip = new Forms.ContextMenuStrip();
         tray.ContextMenuStrip.Opening += (_, _) => BuildTray();
         Content = sheet; sheet.Child = root; root.Background = Brushes.Transparent; root.MouseLeftButtonDown += Drag;
-        SourceInitialized += (_, _) => { handle = new WindowInteropHelper(this).Handle; HwndSource.FromHwnd(handle)?.AddHook(Hook); RegisterShortcut(session.State.Settings.ShortcutModifiers, session.State.Settings.ShortcutKey); RestoreFrame(); };
+        SourceInitialized += (_, _) => { handle = new WindowInteropHelper(this).Handle; HwndSource.FromHwnd(handle)?.AddHook(Hook); var registered = RegisterShortcut(session.State.Settings.ShortcutModifiers, session.State.Settings.ShortcutKey); RestoreFrame(); if (!registered) { settingsOpen = true; compact = false; RestoreFrame(); Render(); } };
         Closing += OnClosing;
         PreviewKeyDown += KeyDownRecorder;
         session.Changed += Render;
