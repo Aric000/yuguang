@@ -1,0 +1,36 @@
+name: Release macOS
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - name: Test core
+        run: bash scripts/test.sh
+      - name: Build application
+        run: bash scripts/build-app.sh
+      - name: Package release assets
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          bash scripts/package-release.sh "$RELEASE_TAG"
+      - name: Upload to Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" dist/release/* --clobber

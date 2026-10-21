@@ -81,6 +81,14 @@ open dist/余光.app
 
 GitHub Actions 提供 `Build macOS` 工作流：提交代码自动测试和打包，也可在 Actions 页面手动运行；完成后从对应运行的 Artifacts 下载 ZIP。云端构建状态以实际工作流结果为准。
 
+## 下载与发布
+
+安装包位于 [GitHub Releases](https://github.com/Aric000/yuguang/releases)。下载与你的 Mac 架构相符的 `.dmg`，打开后将「余光」拖到 Applications；也可下载 ZIP 解压使用。`arm64` 对应 Apple Silicon，`x86_64` 对应 Intel。
+
+维护者发布步骤：仓库右侧 **Releases → Draft a new release**，创建 `v0.1.0` 这样的版本标签，Target 选择 `main`，填写更新说明后点击 **Publish release**。`Release macOS` 工作流会测试、构建，并上传 DMG、ZIP 与 SHA-256 校验文件到该 Release 的 Assets；请等待 Actions 完成。附件名称会标明构建机器的实际架构，当前流程只构建一种架构。
+
+版本号须采用 `v主版本.次版本.修订号`。打包时会同步应用内部版本。当前产物使用 ad-hoc 签名，尚未完成 Apple 公证，首次运行可能被系统提示无法验证开发者。
+
 ## 平台支持
 
 **当前版本仅支持 macOS，尚无 Windows 版本。**
