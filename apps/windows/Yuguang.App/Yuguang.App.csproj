@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting><Nullable>enable</Nullable><ImplicitUsings>disable</ImplicitUsings><TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>Yuguang</AssemblyName><RootNamespace>Yuguang.App</RootNamespace><Version>0.2.0</Version>
+    <ApplicationIcon>../../../shared/assets/AppIcon.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishSingleFile>true</PublishSingleFile><SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier><IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>embedded</DebugType><PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Yuguang.Core/Yuguang.Core.csproj" />
+    <Resource Include="../../../shared/assets/teams/*.png" Link="Assets/Teams/%(Filename)%(Extension)" />
+    <Resource Include="../../../shared/assets/teams/catalog.json" Link="Assets/catalog.json" />
+    <Resource Include="../../../shared/assets/icon.png" Link="Assets/Brand.png"/>
+    <Resource Include="../../../shared/assets/AppIcon.ico" Link="Assets/AppIcon.ico" />
+  </ItemGroup>
+</Project>

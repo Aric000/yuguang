@@ -1,7 +1,0 @@
-export interface Match { matchId: string; matchStatus: string; homeTeamName: string; awayTeamName: string; homeScore?: number | null; awayScore?: number | null; matchTime?: string; frontEndMatchStatus?: { desc?: string } | null; competitionStageDesc?: string; openLive?: boolean }
-export interface Entry { id: string; content: string; time: string; nickName: string }
-export interface Day { day: string; dayBlock: string; matchList: Match[] }
-export interface Preferences { theme: 'system' | 'light' | 'dark'; pinned: boolean; rows: number; simple: boolean; scoreOnly: boolean; menuScore: boolean; shortcut: string; favorites: string[]; lastMatch: string }
-export interface State { days: Day[]; selectedDay: string; teamFilter: string; selectedMatch: Match | null; entries: Entry[]; frozenEntries: Entry[]; following: boolean; unread: number; loadingSchedule: boolean; loadingLive: boolean; scheduleError: string; matchError: string; textError: string; scoreUpdatedAt: number | null; textUpdatedAt: number | null; page: 'matches' | 'live' | 'settings'; compact: boolean; hovered: boolean; menuOpen: boolean; shortcutError: string; preferences: Preferences; demo: boolean; systemDark: boolean; platform: string; version: string }
-export interface Bridge { getState(): Promise<State>; command(command: string, value?: unknown): Promise<void>; subscribe(callback: (state: State) => void): () => void }
-declare global { interface Window { yuguang?: Bridge } }

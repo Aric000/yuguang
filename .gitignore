@@ -7,3 +7,7 @@ node_modules/
 web-dist/
 release/
 *.log
+**/bin/
+**/obj/
+apps/macos/Sources/Yuguang/Resources/Teams/
+apps/macos/scripts/AppIcon.icns

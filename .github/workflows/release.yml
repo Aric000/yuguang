@@ -1,52 +1,44 @@
-name: Release desktop
-
+name: Release native clients
 on:
   release:
     types: [published]
-
 permissions:
   contents: write
-
 concurrency:
   group: release-${{ github.event.release.tag_name }}
   cancel-in-progress: false
-
 jobs:
   package:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-15
-            target: mac
-            arch: arm64
-          - os: windows-latest
-            target: win
-            arch: x64
+        os: [macos-15, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.release.tag_name }}
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-dotnet@v5
+        if: runner.os == 'Windows'
         with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - name: Match application version to Release
+          dotnet-version: '10.0.x'
+      - name: Test and package Mac
+        if: runner.os == 'macOS'
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: node scripts/release-version.cjs
-      - run: npm test
-      - run: npm run desktop-check
-      - name: Build installers
-        run: npm run dist -- --${{ matrix.target }} --${{ matrix.arch }}
+        run: |
+          bash scripts/test-macos.sh
+          bash scripts/build-macos.sh "${RELEASE_TAG#v}"
+          apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
+      - name: Test and package Windows
+        if: runner.os == 'Windows'
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Create checksums
-        run: node scripts/checksums.cjs
-      - name: Upload installers to Release
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          ./scripts/test-windows.ps1
+          ./scripts/build-windows.ps1 -Version ($env:RELEASE_TAG -replace '^v','')
+      - name: Upload installers
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

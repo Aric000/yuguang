@@ -1,0 +1,46 @@
+name: Build native clients
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash scripts/test-macos.sh
+      - run: bash scripts/build-macos.sh 0.2.0
+      - name: Native window diagnostics
+        run: apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Yuguang-macOS-arm64
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.sha256
+          if-no-files-found: error
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Core and native WPF diagnostics
+        run: ./scripts/test-windows.ps1
+      - name: Build portable and installer
+        run: ./scripts/build-windows.ps1 -Version 0.2.0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Yuguang-windows-x64
+          path: |
+            release/*.exe
+            release/windows-selftest.*
+            release/*.sha256
+          if-no-files-found: error

@@ -1,37 +1,26 @@
-# v0.2.0 跨平台迁移
+# 双原生客户端
 
-2026-10-21，将客户端迁为 Electron + React + TypeScript。当前分支只维护这一份实现，旧 Swift 版本保留于 Git 标签 v0.1.1。
+余光在一个 Git 仓库中维护两个原生客户端。macOS 的系统字体和 SwiftUI 排版是产品体验的一部分，Windows 也使用自身的原生文字与窗口技术。
 
-## 实现范围
+| 内容 | macOS | Windows |
+| --- | --- | --- |
+| 界面与窗口 | SwiftUI、AppKit | C#、WPF |
+| 菜单与快捷键 | NSStatusItem、Carbon | NotifyIcon、RegisterHotKey |
+| 网络 | URLSession | HttpClient |
+| 字体 | macOS 系统字体 | Segoe UI / Microsoft YaHei UI |
+| 数据逻辑 | YuguangCore | Yuguang.Core |
+| 安装包 | DMG、ZIP | 自包含单文件 EXE、Inno Setup |
 
-- 共用赛事接入、状态管理、轮询与取消、错误退避、精确 ID 解析、消息去重和历史暂停。
-- 共用赛程、比分、球队配色与本地队徽、主题、设置及 1–6 行精简界面。
-- 共用透明窗口、置顶、快捷键录制、隐藏恢复、拖动与尺寸保存逻辑。
-- Mac 菜单栏和 Windows 托盘使用 Electron 原生菜单；菜单首行始终显示比分与状态。系统差异仅在菜单栏文字、Dock 和全屏空间等小范围分支处理。
-- Windows 构建 NSIS 安装版与 Portable 免安装版；Mac 构建 DMG 与 ZIP。
+接口调用规范、球队颜色目录、球队图标与品牌资源共用；本次不在 Swift 与 C# 之间增加 Rust/C++ 桥接层。两个客户端各自实现相同的数据契约与行为，避免为当前规模引入运行时桥接的复杂度。
 
-## 运行与安全边界
+`shared/assets` 是资源唯一来源，Mac 构建前复制资源，Windows 编译时嵌入。Mac 保持原应用标识及 UserDefaults；Windows 偏好位于 `%LOCALAPPDATA%/Yuguang/settings.json`。迁移用的 Electron 原型保留在本地 `codex/electron-prototype` 分支，生产主线不再依赖 Node 或浏览器运行时。
 
-直播轮询在主进程运行，不依赖后台渲染帧。渲染进程启用 sandbox、contextIsolation，禁用 Node 集成；IPC 校验发送窗口与主 frame，仅暴露已知动作。远程网络地址由主进程固定，不允许前端传任意 URL。禁止新窗口、导航和权限申请，直播文本不作为 HTML 插入。
+比赛请求使用取消令牌及选择代次校验，过期结果不能覆盖新选择。比分与文字刷新失败独立记录；已显示文字保留，错误后重试并重新获取直播 key。单条 ID 保持十进制字符串，避免大整数精度丢失；比分按客队、主队排序，缺失分数以破折号呈现。
 
-json-bigint 避免比赛 ID 经过 JavaScript 浮点数时丢失精度，拒绝原型污染键。偏好写本机文件，演示、自检和截图模式不持久化测试内容。
+Windows 的透明窗口使用 WPF 逻辑单位；鼠标命中使用同一设备像素坐标系的 GetCursorPos / GetWindowRect。精简窗口不受标准标题栏最小高度限制。快捷键重新注册成功后才释放旧键，冲突时保持原绑定。
 
-Mac 首次启动尝试导入旧版常用偏好，自定义快捷键和窗口位置需重新设置。菜单栏比分是 macOS 特有能力，Windows 用托盘提示和菜单展示比分。
+## 验证范围
 
-## 验证记录
+Mac：Swift 核心测试、原生窗口诊断、实际本机启动与打包签名校验。
 
-- 16 项 Node 核心测试通过：ID、错误响应、编码、去重、请求切换竞态、断网保留内容、未开赛/结束行为、历史阅读、窗口几何。
-- 2 项 React Testing Library 测试通过：设置切换行数与简洁模式、比赛切换保持精简、非演示浏览器无桌面桥接。
-- TypeScript 严格模式与 Vite 构建通过。
-- 桌面原生自检 14 项通过：沙箱、全局快捷键、托盘比分、行数尺寸、模式、显示隐藏、简洁偏好及队徽隐藏。
-- 真实四个赛事接口验证通过，未以演示数据代替。
-- 设计 lint 0 FAIL；浏览器 inspector 0 FAIL、2 WARN。已查看 1440/768/390 截图：1440 的空白提示超出桌面窗口实际最大宽度，11–12px 主要用于紧凑解说时刻与辅助信息，保留原产品密度。桌面实际截图另存 docs/screenshots。
-- 主色和原生字体沿用原产品，不重新随机设计。方向为 Framed sheet（原记录 seed 730602018）；本次移植未更换品牌配色。
-
-Windows 的最终构建、自检与安装包上传以 GitHub Actions 的实际结果为准；CI 自动化不等同于在真实 Windows 桌面逐项人工验收。首次跨平台发行仍建议在 Windows 10/11 实机检查透明、拖动、缩放与快捷键冲突。
-
-## 取舍
-
-Electron 包含 Chromium，安装包和内存开销比旧原生版增加。换来业务与界面共用，无需维护两套功能；透明窗和托盘仍需分别验证平台行为。
-
-正式发行证书、公证和 Windows Authenticode 尚未配置。运行时生产依赖 `npm audit --omit=dev` 为 0 漏洞；构建依赖存在上游 sprintf-js 精度参数拒绝服务的 moderate 通告，不随生产应用打包，未通过降级打包器来隐藏通告。
+Windows：C# 核心检查（可在 Mac 执行）、交叉编译、GitHub Windows Runner 的 WPF 窗口与资源诊断、便携版及安装包构建。自动诊断不等同于真实多显示器、多 DPI 与不同 Windows 主题的完整人工验收。
