@@ -251,7 +251,7 @@ public sealed class MainWindow : Window
         Assert(session.State.Demo, "Diagnostics require explicit demo mode"); Assert(colors.Count == 30, "30 team assets");
         foreach (var team in colors.Keys) Assert(new BitmapImage(new Uri($"pack://application:,,,/Assets/Teams/{Uri.EscapeDataString(team)}.png")).PixelWidth > 0, "team " + team);
         Assert(session.State.SelectedMatch?.Heading.Contains("102 : 99") == true, "score direction"); BuildTray(); Assert(tray.ContextMenuStrip!.Items[0].Text?.Contains("102 : 99") == true, "tray score");
-        SetCompact(true); for (int rows = 1; rows <= 6; rows++) { session.UpdateSettings(session.State.Settings with { Rows = rows }); UpdateLayout(); Assert(Height == 32 * rows, "compact rows " + rows); }
+        SetCompact(true); for (int rows = 1; rows <= 6; rows++) { session.UpdateSettings(session.State.Settings with { Rows = rows }); UpdateLayout(); Assert(Height == 32 * rows && Math.Abs(ActualHeight - Height) < 1, "actual compact height " + rows); }
         session.Select(session.SwitchableMatches[1]); Assert(compact, "quick selection keeps compact"); SetCompact(false); Assert(Height >= 460, "restore expanded frame");
         settingsOpen = true; Render(); Assert(root.Children.Count > 1, "settings render");
         Assert(shortcutError.Length == 0, "global hotkey registration"); Hide(); ToggleVisibility(); Assert(IsVisible, "restore hidden window");

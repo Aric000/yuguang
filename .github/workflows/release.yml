@@ -38,6 +38,7 @@ jobs:
         run: |
           ./scripts/test-windows.ps1
           ./scripts/build-windows.ps1 -Version ($env:RELEASE_TAG -replace '^v','')
+          ./scripts/check-package-windows.ps1 -Version ($env:RELEASE_TAG -replace '^v','')
       - name: Upload installers
         shell: bash
         env:

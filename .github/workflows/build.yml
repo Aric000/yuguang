@@ -36,6 +36,8 @@ jobs:
         run: ./scripts/test-windows.ps1
       - name: Build portable and installer
         run: ./scripts/build-windows.ps1 -Version 0.2.0
+      - name: Check portable app and installed app
+        run: ./scripts/check-package-windows.ps1 -Version 0.2.0
       - uses: actions/upload-artifact@v7
         with:
           name: Yuguang-windows-x64

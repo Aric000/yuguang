@@ -18,7 +18,7 @@
 
 - Mac：11 项 Swift Testing 核心测试；22 项原生窗口诊断，包括真实拖动区域、快捷键、菜单图标、球队资源、行数、透明状态、比赛切换、显示隐藏和简洁模式。
 - Windows 核心：19 项离线检查，另有可选真实赛程、比分、直播 key 与文字接口检查；在本机 .NET 10 执行。
-- WPF：Mac 上以 Windows 目标交叉编译，编译警告作为错误；GitHub Windows Runner 执行窗口诊断并构建自包含便携 EXE 与当前用户安装程序。
+- WPF：Mac 上以 Windows 目标交叉编译，编译警告作为错误；GitHub Windows Runner 已通过 45 项 WPF 窗口检查并构建自包含便携 EXE 与当前用户安装程序；另加入便携版启动、静默安装后启动及卸载检查，验证最终交付文件。
 - Mac 打包：DMG 与 ZIP；应用使用 adhoc 签名，并以 codesign --verify --deep --strict 校验。
 
 ## 审查结论与范围
