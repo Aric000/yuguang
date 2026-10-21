@@ -3,3 +3,7 @@ dist/
 .DS_Store
 .swiftpm/
 *.xcuserstate
+node_modules/
+web-dist/
+release/
+*.log

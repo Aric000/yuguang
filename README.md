@@ -8,9 +8,9 @@
 
 **使用余光关注比赛，一边用 AI 编程，一边观看比赛。**
 
-原生 macOS NBA 文字直播助手 · 轻盈悬浮 · 透明文字 · 一键隐现
+Mac / Windows NBA 文字直播助手 · 轻盈悬浮 · 透明文字 · 一键隐现
 
-[界面预览](#界面预览) · [开始使用](#开始使用) · [本地构建](#本地构建) · [平台支持](#平台支持)
+[下载安装](https://github.com/Aric000/yuguang/releases/latest) · [开始使用](#开始使用) · [本地开发](#本地开发)
 
 </div>
 
@@ -18,29 +18,29 @@
 
 于是，我们把球场收进一小行文字里。它可以安静地停在编辑器旁，也可以展开成一扇完整的赛事窗口。在代码、思考与比赛之间，留一点恰到好处的余地。
 
+从 **v0.2.0** 起，Mac 和 Windows 共用同一套 Electron + React + TypeScript 代码：相同的界面、赛事逻辑和交互，由各平台构建安装包。
+
 ## 为专注而设计
 
 | 特点 | 体验 |
 | --- | --- |
 | **一行，也可以更多** | 精简视图支持 1–6 行，包含比分行；多行显示最新解说，按你的桌面空间取舍。 |
-| **移开鼠标，只留文字** | 精简视图自动隐去底色、阴影与按钮；移入恢复操作，文字位置保持不变。 |
-| **一键隐现** | 默认 `Control + 反引号` 全局隐藏，再按恢复；快捷键可在设置中录制。 |
+| **移开鼠标，只留文字** | 自动隐去精简窗口的底色、阴影和按钮；移入恢复操作，文字位置保持不变。 |
+| **一键隐现** | 默认 Control + 反引号全局隐藏，再按恢复；快捷键可在设置中录制。 |
 | **切换比赛，保持轻盈** | 精简视图右上角直接切换比赛、选择日期，无需展开窗口。 |
-| **展开，认真看球** | 完整比分、球队队徽、球队配色与文字时间线，支持雾白、炭黑和系统主题。 |
+| **展开，认真看球** | 完整比分、30 支球队的队徽、球队配色和文字时间线，支持雾白、炭黑和系统主题。 |
 | **你的球队，优先出现** | 按球队筛选、星标关注，关注球队的比赛优先展示。 |
 | **纯文字的克制** | 启用简洁模式后不显示球队 Logo，记住偏好，下次启动继续使用。 |
-| **融入 macOS** | 原生菜单栏入口、可选菜单栏比分、置顶、窗口位置记忆与边缘吸附。 |
+| **桌面上的一瞥** | Mac 菜单栏 / Windows 系统托盘入口，菜单首行展示比分与状态；Mac 可显示菜单栏比分。 |
 
 没有声音和通知，没有账号注册，也不因比分更新弹出窗口。比赛在继续，你也可以继续手上的事情。
 
 ## 界面预览
 
-<table>
-<tr>
+<table><tr>
 <td align="center"><img src="docs/screenshots/live-light.png" width="360" alt="雾白主题完整赛事窗口" /><br/>雾白 · 完整赛事窗口</td>
 <td align="center"><img src="docs/screenshots/live-dark.png" width="360" alt="炭黑主题完整赛事窗口" /><br/>炭黑 · 夜间阅读</td>
-</tr>
-</table>
+</tr></table>
 
 **收起窗口，把比赛放在余光里。**
 
@@ -50,95 +50,100 @@
 
 ![多行视图](docs/screenshots/compact-multiline.png)
 
-以上为应用原生界面截图，比分与文字均为明确标注的演示数据；正常启动连接实际赛事接口。
+截图来自应用演示模式，比分和文字为示例数据；正常启动使用实际赛事接口，不回退到假数据。
+
+## 下载安装
+
+前往 [GitHub Releases](https://github.com/Aric000/yuguang/releases/latest)，选择对应安装包：
+
+| 系统 | 文件 | 安装方式 |
+| --- | --- | --- |
+| macOS 14+，Apple Silicon | `Yuguang-版本-mac-arm64.dmg` | 打开后拖到 Applications |
+| macOS 14+，Apple Silicon | `Yuguang-版本-mac-arm64.zip` | 解压后运行 |
+| Windows 10 / 11，64 位 | `Yuguang-版本-windows-x64-setup.exe` | 运行安装向导，支持选择安装目录 |
+| Windows 10 / 11，64 位 | `Yuguang-版本-windows-x64-portable.exe` | 免安装运行 |
+
+当前发布流程提供 Apple Silicon 和 Windows x64 安装包；Intel Mac 可在对应机器使用同一源码构建。Linux 暂未列入支持范围。
+
+安装包尚未配置付费发行证书：Mac 使用 ad-hoc 签名、未经过 Apple 公证；Windows 未使用 Authenticode 签名。首次运行可能出现系统验证提示。确认安装包来自本仓库后，Mac 可在「系统设置 → 隐私与安全性」中选择「仍要打开」。
 
 ## 开始使用
 
-1. 打开余光，在赛程中选择日期、球队，再点击比赛进入文字直播。
-2. 拖动窗口顶部的 Logo、标题或空白处移动完整窗口；右上角收起按钮进入精简视图。
-3. 精简视图的文字和空白处都能拖动，双击展开；拖动窗口边缘调整宽度。
-4. 鼠标移开精简窗口后只保留文字。移回窗口，再点击右上角双向箭头切换比赛。
-5. 按 **Control + 反引号（⌃ + &#96;）** 隐藏 / 恢复窗口。关闭按钮只隐藏，退出请使用菜单栏「退出余光」。
+1. 在赛程中选择日期、球队，点击比赛进入文字直播。
+2. 拖动窗口顶部 Logo、标题或空白移动完整窗口，右上角收起按钮进入精简视图。
+3. 精简视图文字和空白处均可拖动，双击展开。右下角 / 精简视图右边缘可拖动调整大小。
+4. 移开鼠标后，精简视图只保留文字。移回窗口，点击右上角双向箭头切换比赛。
+5. 按 **Control + 反引号（⌃ + &#96;）** 隐藏 / 恢复。关闭按钮只隐藏，退出请使用菜单栏 / 托盘「退出余光」。
 
-通过菜单栏或 `⌘ ,` 打开偏好设置，可调整显示行数、主题、置顶、菜单栏比分与快捷键。精简视图也支持右键选择行数。
+通过菜单栏、托盘或 Mac `⌘ ,` / Windows `Ctrl+,` 打开设置，调整主题、置顶、显示行数和快捷键。Windows 托盘图标可能被系统收进隐藏区域，可点击任务栏的小箭头查看。
 
-「启用简洁模式」会立即进入精简视图并保存启动偏好。临时展开不会关闭该偏好；保持开启时，完整窗口和赛程列表也省略球队 Logo。
+「启用简洁模式」立即进入精简视图并保存启动偏好；临时展开不关闭该偏好，完整窗口和赛程也省略队徽。关闭开关后恢复完整窗口与队徽。
 
-阅读历史时，滚动列表或点击「阅读历史」暂停自动跟随；点击「回到最新」恢复。
+滚动解说或点「阅读历史」暂停跟随，点「回到最新」恢复。隐藏窗口后仍更新当前比赛。
 
-## 本地构建
+Mac 升级自原生 v0.1.x 时，首次启动尝试导入原有主题、行数、关注球队等偏好；自定义快捷键和窗口位置需重新设置。
 
-需要 **macOS 14 或更高版本、Swift 6 或更高版本**，安装 Xcode 或 Apple Command Line Tools。无第三方运行依赖。
+## 本地开发
+
+需要 Node.js 24+ 与 npm。Mac 和 Windows 使用相同命令：
 
 ```sh
 git clone https://github.com/Aric000/yuguang.git
 cd yuguang
-bash scripts/build-app.sh
-open dist/余光.app
-```
-
-产物为 `dist/余光.app` 与 `dist/Yuguang-macOS.zip`，架构跟随构建机器；当前本机验证为 Apple Silicon。构建脚本使用本地 ad-hoc 签名，尚未配置 Developer ID 签名及 Apple 公证。
-
-GitHub Actions 提供 `Build macOS` 工作流：提交代码自动测试和打包，也可在 Actions 页面手动运行；完成后从对应运行的 Artifacts 下载 ZIP。云端构建状态以实际工作流结果为准。
-
-## 下载与发布
-
-安装包位于 [GitHub Releases](https://github.com/Aric000/yuguang/releases)。下载与你的 Mac 架构相符的 `.dmg`，打开后将「余光」拖到 Applications；也可下载 ZIP 解压使用。`arm64` 对应 Apple Silicon，`x86_64` 对应 Intel。
-
-维护者发布步骤：仓库右侧 **Releases → Draft a new release**，创建 `v0.1.0` 这样的版本标签，Target 选择 `main`，填写更新说明后点击 **Publish release**。`Release macOS` 工作流会测试、构建，并上传 DMG、ZIP 与 SHA-256 校验文件到该 Release 的 Assets；请等待 Actions 完成。附件名称会标明构建机器的实际架构，当前流程只构建一种架构。
-
-版本号须采用 `v主版本.次版本.修订号`。打包时会同步应用内部版本。当前产物使用 ad-hoc 签名，尚未完成 Apple 公证，首次运行可能被系统提示无法验证开发者。
-
-## 平台支持
-
-**当前版本仅支持 macOS，尚无 Windows 版本。**
-
-界面与窗口能力基于 SwiftUI、AppKit 和 Carbon。GitHub Actions 能自动构建已有实现，但不能把这些 macOS 系统框架转换成 Windows 应用；仅切换到 Windows runner 无法生成可用的 `.exe`。
-
-后续 Windows 移植可以沿用赛事接口、交互方案和品牌资产，另行实现桌面窗口、透明悬浮、托盘与全局快捷键。网络与数据模型已独立在 `YuguangCore` 中，方便后续复用或迁移。
-
-## 验证与开发
-
-```sh
-# 数据模型与协议回归测试
-bash scripts/test.sh
-
-# 实际请求赛程、比分、直播参数与文字列表
-swift run Yuguang --check-api
-
-# 先退出已运行的余光，再执行原生窗口检查
-# 使用演示数据，不连接直播
-dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
+npm ci
+npm start
 ```
 
 ```sh
-# 生成实际 SwiftUI 界面的演示截图
-dist/余光.app/Contents/MacOS/Yuguang --demo --capture "$PWD/docs/screenshots"
+npm test                 # 数据 / 轮询 / 几何与 React 界面测试
+npm run check-api        # 实际验证四个赛事接口
+npm run desktop-check    # 演示模式下验证原生窗口与托盘；先退出已有余光以释放快捷键
+npm run pack             # 生成当前平台的应用目录
+npm run dist             # 生成当前平台安装包，位于 release/
 ```
+
+开发浏览器预览：`npm run dev`，访问 `http://127.0.0.1:5173/?demo=1`。仅显式演示模式使用示例数据，浏览器不具备托盘、透明窗口和全局快捷键。
+
+```sh
+# 实际 Electron 窗口截图，演示数据，不改动正式偏好
+npx electron . --demo --capture "$PWD/docs/screenshots"
+```
+
+安装时首次运行 Electron CLI 会下载运行时；网络受限可按 Electron 官方下载说明配置镜像。本地安装包体积比旧 Swift 原生版更大，换来两个平台共用界面与业务逻辑。
+
+## 自动构建与发布
+
+`Build desktop` 在主分支提交或 PR 时分别运行 Mac / Windows 测试、桌面自检和打包，安装包可从运行记录的 Artifacts 下载。
+
+正式发布：在 [Releases](https://github.com/Aric000/yuguang/releases) 创建新版本，例如 `v0.2.0`，Target 选择 `main`，点击 **Publish release**。`Release desktop` 会同步应用内部版本，分别构建 DMG、ZIP、Windows 安装版与免安装版，并将安装包和 SHA-256 校验文件上传到该版本 Assets。无需在 Mac 上交叉编译 Windows。
+
+旧的 Swift 原生实现保留在 Git 标签 [`v0.1.1`](https://github.com/Aric000/yuguang/tree/v0.1.1) 中，当前主分支只维护跨平台实现。
+
+## 项目结构
 
 | 目录 | 职责 |
 | --- | --- |
-| `Sources/YuguangCore` | 赛事模型、响应解析与网络服务协议 |
-| `Sources/Yuguang` | 状态与轮询、SwiftUI 界面、AppKit 窗口与菜单栏、全局快捷键 |
-| `Tests` | 数据与接口契约测试 |
-| `scripts` | 打包脚本、应用元信息、原创图标生成源文件 |
-| `docs` | 设计记录、界面截图与代码审查报告 |
-
-审查结果见 [代码审查记录](docs/CODE_REVIEW.md)，接口细节见 [数据接入说明](docs/API.md)。
+| `desktop/core.cjs` | 接口、精确 ID 解析、状态与轮询、消息去重 |
+| `desktop/main.cjs` | 窗口、托盘、快捷键、持久化与受限 IPC |
+| `desktop/preload.cjs` | 隔离渲染进程的最小通信接口 |
+| `src` | 共用 React + TypeScript 界面与样式 |
+| `public/teams` | 30 队本地队徽与来源、配色目录 |
+| `tests` | 业务和 React 回归测试 |
+| `.github/workflows` | 双平台构建与 Release 自动上传 |
 
 ## 数据与隐私
 
-赛程、比分与文字直播来自虎扑相关赛事接口，可能存在延迟；比分与文字分别更新，短暂不同步属于数据源特性。应用保留最近成功的数据，并显示更新时间或连接错误。
+数据来自虎扑相关赛事接口，可能有延迟；比分和文字独立更新，可能短暂不同步。错误时保留最近成功内容并显示提示。消息按服务端顺序去重，每次会话最多保留 500 条，不承诺补全整场历史。第三方接口可能变化，当前仅接入 NBA 文字直播。
 
-消息按服务端顺序去重，每次会话最多保留 500 条。接口只返回近期消息，不承诺补全整场历史。第三方接口可能变化，当前仅接入 NBA 文字直播，不提供视频、评论、登录或其他联赛。
+偏好保存在本机 `preferences.json`，不包含账号或凭据。Mac 位于 `~/Library/Application Support/余光/`，Windows 位于 `%APPDATA%/余光/`。无内置分析统计，不上传偏好。网络请求在桌面主进程中完成，渲染进程启用沙箱、上下文隔离且禁用 Node 集成，远程直播内容只按纯文字显示。
 
-球队关注、外观、快捷键与窗口位置保存在本机 UserDefaults。应用不内置分析统计、不上传偏好；获取赛事数据时直接访问数据服务，缺少本地队徽时可能请求远程图片。
+接口细节见 [数据接入说明](docs/API.md)，迁移和验证记录见 [跨平台迁移记录](docs/CROSS_PLATFORM.md)。
 
 ## 致谢
 
-感谢 [hupumoyu-assistant](https://github.com/chenyaoyi88/hupumoyu-assistant) 提供接口调用思路。余光独立实现原生客户端与视觉设计。
+感谢 [hupumoyu-assistant](https://github.com/chenyaoyi88/hupumoyu-assistant) 提供接口调用思路。余光独立实现客户端与视觉设计。
 
-「余光之眼」将眼睛、篮球与篮筐融为一个简洁标志，表达随手一瞥，也能跟上比赛。球队队徽与球队标识的权利归各自权利人；本项目与 NBA、各球队及虎扑无官方隶属关系。
+「余光之眼」将眼睛、篮球与篮筐融为一个标志。球队队徽和标识的权利归各自权利人；本项目与 NBA、各球队及虎扑无官方隶属关系。
 
 ---
 
