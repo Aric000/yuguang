@@ -26,7 +26,7 @@ public sealed class MainWindow : Window
     private readonly Forms.NotifyIcon tray;
     private readonly Dictionary<string, string> colors = new();
     private readonly Drawing.Icon trayIcon;
-    private bool compact, quitting, menuOpen, settingsOpen, recording, rebuilding;
+    private bool compact, quitting, menuOpen, settingsOpen, recording, rebuilding, pendingRender;
     private int hotKeyId = 1;
     private IntPtr handle;
     private Brush ink = Brushes.Black, muted = Brushes.Gray, paper = Brushes.White, surface = Brushes.WhiteSmoke;
@@ -55,7 +55,7 @@ public sealed class MainWindow : Window
         Closing += OnClosing;
         PreviewKeyDown += KeyDownRecorder;
         session.Changed += Render;
-        hover.Tick += (_, _) => ApplyHover(); hover.Start();
+        hover.Tick += (_, _) => { if (pendingRender && Mouse.Captured == null) Render(); ApplyHover(); }; hover.Start();
         LocationChanged += (_, _) => { if (!rebuilding && IsLoaded) SaveFrame(); };
         Render();
     }
@@ -83,6 +83,9 @@ public sealed class MainWindow : Window
     private void Render()
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(Render); return; }
+        // Polling must not replace a control while a popup or resize gesture owns capture.
+        if (Mouse.Captured != null) { pendingRender = true; return; }
+        pendingRender = false;
         var scrollOffset = liveScroll?.VerticalOffset ?? 0;
         rebuilding = true;
         var prefs = session.State.Settings;
