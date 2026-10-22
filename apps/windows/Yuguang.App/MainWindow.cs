@@ -54,6 +54,13 @@ public sealed class MainWindow : Window
         SourceInitialized += (_, _) => { handle = new WindowInteropHelper(this).Handle; HwndSource.FromHwnd(handle)?.AddHook(Hook); var registered = RegisterShortcut(session.State.Settings.ShortcutModifiers, session.State.Settings.ShortcutKey); RestoreFrame(); if (!registered) { settingsOpen = true; compact = false; RestoreFrame(); Render(); } };
         Closing += OnClosing;
         PreviewKeyDown += KeyDownRecorder;
+        PreviewMouseWheel += (_, e) =>
+        {
+            if (!compact) return;
+            // Downward wheel input is negative; retain fractions for precision devices.
+            session.ScrollCompactPixels(-e.Delta * (32.0 / 120));
+            e.Handled = true;
+        };
         session.Changed += Render;
         hover.Tick += (_, _) => { if (pendingRender && Mouse.Captured == null) Render(); ApplyHover(); }; hover.Start();
         LocationChanged += (_, _) => { if (!rebuilding && IsLoaded) SaveFrame(); };
@@ -111,18 +118,37 @@ public sealed class MainWindow : Window
     {
         Height = session.State.Settings.Rows * 32;
         var first = new Grid { Height = 31, Background = Brushes.Transparent }; first.MouseLeftButtonDown += Drag;
-        first.ColumnDefinitions.Add(new ColumnDefinition()); first.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        first.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        first.ColumnDefinitions.Add(new ColumnDefinition());
+        first.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var match = session.State.SelectedMatch;
-        var line = (session.State.Demo ? "演示 · " : "") + (match?.Heading ?? "余光 · 选择一场比赛");
-        if (session.State.Settings.Rows == 1 && !session.State.Settings.ScoreOnly) line += "   " + session.State.LatestText;
-        if (session.State.ConnectionError.Length > 0) line += " · 连接重试中";
-        first.Children.Add(Text(line, 12));
-        compactControls = Row(); compactControls.Children.Add(Button("⇄", () => QuickMenu(), "切换比赛")); compactControls.Children.Add(Button("↗", () => SetCompact(false), "展开窗口"));
-        Grid.SetColumn(compactControls, 1); first.Children.Add(compactControls); AddRow(first, root, 31);
-        for (int index = 0; index < session.State.Settings.Rows - 1; index++)
+        var history = session.State.CompactHistory;
+        var title = (session.State.Demo ? "演示 · " : "") + (match is null ? "余光 · 选择比赛" : $"{match.Away} {match.Score} {match.Home}");
+        if (session.State.ConnectionError.Length > 0) title += " · !";
+        var score = Text(title, 12); score.Margin = new Thickness(0, 0, 10, 0); score.ToolTip = match?.Heading; first.Children.Add(score);
+        if (session.State.Settings.Rows == 1 && (!session.State.Settings.ScoreOnly || history.IsReading))
         {
-            var entry = session.State.Entries.ElementAtOrDefault(index); var row = new Border { Height = 32, Background = Brushes.Transparent, Child = Text(entry?.Content ?? (index == 0 ? session.State.LatestText : ""), 12, index == 0 ? ink : muted) }; row.MouseLeftButtonDown += Drag; AddRow(row, root, 32);
+            var message = CompactMessages(1, true); Grid.SetColumn(message, 1); first.Children.Add(message);
         }
+        compactControls = Row();
+        compactControls.Children.Add(Button("⇄", () => QuickMenu(), "切换比赛"));
+        if (history.IsReading) compactControls.Children.Add(Button("↑", session.FollowCompactLatest, $"回到最新（{history.UnreadCount(session.State.Entries)} 条新消息）"));
+        compactControls.Children.Add(Button("↗", () => SetCompact(false), "展开窗口"));
+        Grid.SetColumn(compactControls, 2); first.Children.Add(compactControls); AddRow(first, root, 31);
+        if (session.State.Settings.Rows > 1) AddRow(CompactMessages(session.State.Settings.Rows - 1, false), root, 32 * (session.State.Settings.Rows - 1));
+    }
+    private Grid CompactMessages(int rows, bool inline)
+    {
+        var viewport = new Grid { Height = 32 * rows, ClipToBounds = true, Background = Brushes.Transparent };
+        var messages = session.State.CompactHistory.VisibleEntries(session.State.Entries);
+        var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Top, RenderTransform = new TranslateTransform(0, -session.State.CompactHistory.Remainder) };
+        foreach (var entry in messages.Take(rows + 1))
+        {
+            var text = Text((inline ? "" : entry.Clock + "  ") + entry.Content, 12, inline ? muted : ink); text.ToolTip = entry.Content;
+            stack.Children.Add(new Border { Height = 32, Child = text });
+        }
+        if (messages.Count == 0) stack.Children.Add(new Border { Height = 32, Child = Text(session.State.LatestText, 12, muted) });
+        viewport.Children.Add(stack); return viewport;
     }
     private Grid Header()
     {
@@ -180,7 +206,7 @@ public sealed class MainWindow : Window
         body.Children.Add(Text("外观", 12, muted)); var themes = new ComboBox { ItemsSource = new[] { "跟随系统", "浅色", "深色" }, SelectedIndex = session.State.Settings.Theme == "light" ? 1 : session.State.Settings.Theme == "dark" ? 2 : 0, Margin = new Thickness(0, 8, 0, 14) }; themes.SelectionChanged += (_, _) => { var value = themes.SelectedIndex == 1 ? "light" : themes.SelectedIndex == 2 ? "dark" : "system"; if (value != session.State.Settings.Theme) session.UpdateSettings(session.State.Settings with { Theme = value }); }; body.Children.Add(themes);
         body.Children.Add(Text("全局显示 / 隐藏快捷键", 12, muted)); body.Children.Add(Button(recording ? "按下组合键… Esc 取消" : session.State.Settings.ShortcutLabel + " · 点击录制", () => { recording = true; Render(); Focus(); }));
         body.Children.Add(Text(shortcutError, 11, Color(Accent))); body.Children.Add(Text(session.State.PreferencesError, 11, Color(Accent)));
-        var note = Text("鼠标移开精简窗口后，边框和控件自动隐去。\n双击文字展开；右上角 ⇄ 可直接切换比赛。\n\n余光 0.2.0 · Windows 原生版\n一边用 AI 编程，一边观看比赛。", 12, muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 25, 0, 0); body.Children.Add(note);
+        var note = Text("鼠标移开精简窗口后，边框和控件自动隐去。\n双击文字展开；右上角 ⇄ 可直接切换比赛。\n\n余光 0.2.1 · Windows 原生版\n一边用 AI 编程，一边观看比赛。", 12, muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 25, 0, 0); body.Children.Add(note);
         root.RowDefinitions.Add(new RowDefinition()); var scroll = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; Grid.SetRow(scroll, root.RowDefinitions.Count - 1); root.Children.Add(scroll);
     }
     private void ApplyHover()
@@ -254,8 +280,14 @@ public sealed class MainWindow : Window
         Assert(session.State.Demo, "Diagnostics require explicit demo mode"); Assert(colors.Count == 30, "30 team assets");
         foreach (var team in colors.Keys) Assert(new BitmapImage(new Uri($"pack://application:,,,/Assets/Teams/{Uri.EscapeDataString(team)}.png")).PixelWidth > 0, "team " + team);
         Assert(session.State.SelectedMatch?.Heading.Contains("102 : 99") == true, "score direction"); BuildTray(); Assert(tray.ContextMenuStrip!.Items[0].Text?.Contains("102 : 99") == true, "tray score");
-        SetCompact(true); for (int rows = 1; rows <= 6; rows++) { session.UpdateSettings(session.State.Settings with { Rows = rows }); UpdateLayout(); Assert(Height == 32 * rows && Math.Abs(ActualHeight - Height) < 1, "actual compact height " + rows); }
-        session.Select(session.SwitchableMatches[1]); Assert(compact, "quick selection keeps compact"); SetCompact(false); Assert(Height >= 460, "restore expanded frame");
+        SetCompact(true); session.UpdateSettings(session.State.Settings with { Rows = 1 });
+        RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120) { RoutedEvent = Mouse.PreviewMouseWheelEvent }); UpdateLayout();
+        Assert(session.State.CompactHistory.IsReading, "compact history navigation");
+        Assert(compactControls!.Children.OfType<Button>().Any(button => button.Content?.ToString() == "↑"), "return to latest control");
+        session.FollowCompactLatest(); Assert(!session.State.CompactHistory.IsReading, "compact resume latest");
+        session.ScrollCompact(1);
+        for (int rows = 1; rows <= 6; rows++) { session.UpdateSettings(session.State.Settings with { Rows = rows }); UpdateLayout(); Assert(Height == 32 * rows && Math.Abs(ActualHeight - Height) < 1, "actual compact height " + rows); }
+        session.Select(session.SwitchableMatches[1]); Assert(compact, "quick selection keeps compact"); Assert(!session.State.CompactHistory.IsReading, "switch resets compact history"); SetCompact(false); Assert(Height >= 460, "restore expanded frame");
         settingsOpen = true; Render(); Assert(root.Children.Count > 1, "settings render");
         Assert(shortcutError.Length == 0, "global hotkey registration"); Hide(); ToggleVisibility(); Assert(IsVisible, "restore hidden window");
         return JsonSerializer.Serialize(new { passed = checks, platform = "WPF", font = FontFamily.Source, rows = "1–6", assets = colors.Count });

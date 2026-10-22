@@ -26,6 +26,12 @@ final class AppModel {
     var page: Page = .matches {
         didSet { if page != .settings { isRecordingShortcut = false } }
     }
+    var compactHistory = CompactHistory()
+    var compactEntries: [LiveEntry] { compactHistory.visibleEntries(entries) }
+    var compactUnread: Int { compactHistory.unreadCount(entries) }
+    func scrollCompact(_ steps: Int) { compactHistory.move(steps, live: entries) }
+    func scrollCompactPixels(_ distance: Double) { compactHistory.scroll(distance, live: entries, visibleRows: max(1, compactRows - 1)) }
+    func followCompactLatest() { compactHistory.reset() }
     var compact = false
     var simpleModeEnabled = UserDefaults.standard.bool(forKey: "simpleModeEnabled") {
         didSet {
@@ -34,7 +40,7 @@ final class AppModel {
         }
     }
     var compactRows = min(6, max(1, UserDefaults.standard.object(forKey: "compactRows") as? Int ?? 1)) {
-        didSet { UserDefaults.standard.set(compactRows, forKey: "compactRows"); onWindowChange?() }
+        didSet { compactHistory.scroll(0, live: entries, visibleRows: max(1, compactRows - 1)); UserDefaults.standard.set(compactRows, forKey: "compactRows"); onWindowChange?() }
     }
     var compactHeight: CGFloat { CGFloat(compactRows) * 32 }
     var compactHovered = false {
@@ -137,6 +143,7 @@ final class AppModel {
     func select(_ match: Match) {
         if selectedMatch?.id == match.id { page = .live; return }
         polling?.cancel(); selectionGeneration += 1
+        compactHistory.reset()
         selectedMatch = match; page = .live; entries = []; frozenEntries = []; following = true; unread = 0
         liveKey = nil; failures = 0; lastStatusPoll = .distantPast
         scoreUpdatedAt = nil; textUpdatedAt = nil; matchError = nil; textError = nil

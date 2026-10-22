@@ -29,6 +29,26 @@ var fake = new RaceService(); using (var session = new LiveSession(fake, new()))
     session.ToggleFollowing(); Check(!session.State.Following && session.State.FrozenEntries.Count == 1, "pause freezes snapshot"); session.ToggleFollowing(); Check(session.State.Following && session.State.Unread == 0, "resume resets unread");
 }
 int writes = 0; using (var demo = new LiveSession(fake, new(), _ => writes++)) { demo.LoadDemo(); demo.UpdateSettings(new() { Rows = 6 }); Check(writes == 0, "diagnostics never persist preferences"); }
+var original = Enumerable.Range(0, 5).Select(i => new LiveEntry(i.ToString(), "message " + i, "")).ToArray();
+var history = new CompactHistory(); history.Move(1, original);
+Check(history.IsReading && history.VisibleEntries(original)[0].Id == "1", "compact scroll enters history");
+var incoming = new[] { new LiveEntry("new", "new message", "") }.Concat(original).ToArray();
+Check(history.VisibleEntries(incoming)[0].Id == "1" && history.UnreadCount(incoming) == 1, "new messages do not move compact history");
+history.Move(500, incoming); Check(history.VisibleEntries(incoming)[0].Id == "4", "compact oldest boundary");
+history.Move(-500, incoming); Check(!history.IsReading && history.VisibleEntries(incoming)[0].Id == "new" && history.UnreadCount(incoming) == 0, "scroll to live resumes latest");
+history.Scroll(5.5, original, 3); Check(history.Position == 5.5 && history.Offset == 0 && history.Remainder == 5.5, "fractional continuous history scroll");
+Check(history.VisibleEntries(incoming)[0].Id == "0", "fractional scroll also freezes incoming batches");
+history.Scroll(500, incoming, 3); Check(history.Position == 64 && history.VisibleEntries(incoming).Count == 3, "oldest boundary fills viewport");
+history.Scroll(-500, incoming, 3); Check(!history.IsReading, "scroll up to top resumes follow");
+history.Scroll(10, original, 6); Check(!history.IsReading, "no scrolling when messages fit viewport");
+history.Move(1, []); Check(!history.IsReading, "empty compact history");
+history.Move(1, original.Take(1).ToArray()); Check(!history.IsReading, "single-message compact history");
+using (var compactSession = new LiveSession(fake, new())) {
+    compactSession.LoadDemo(); compactSession.ScrollCompact(1);
+    Check(compactSession.State.CompactHistory.IsReading && compactSession.State.Following, "compact history independent of expanded follow mode");
+    compactSession.Select(compactSession.SwitchableMatches.First(m => m.Id != "demo"));
+    Check(!compactSession.State.CompactHistory.IsReading, "match switch resets compact cursor");
+}
 if (args.Contains("--check-api"))
 {
     using var client = new HttpClient(); var api = new HupuApi(client); using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45)); var schedule = await api.ScheduleAsync(timeout.Token); Check(schedule.Days.Count > 0, "live schedule"); var match = schedule.Days.SelectMany(day => day.Matches).FirstOrDefault(m => !m.IsUpcoming && m.OpenLive != false); if (match != null) { var latest = await api.MatchAsync(match.Id, timeout.Token); Check(latest.Id == match.Id, "live match"); var key = await api.KeyAsync(match.Id, timeout.Token); var entries = await api.TextAsync(match.Id, key, timeout.Token); Check(entries.Count > 0, "live text"); Console.WriteLine(latest.Heading + " · " + entries.Count + " text entries"); }

@@ -6,6 +6,7 @@ public sealed class LiveState
     public string SelectedDay { get; internal set; } = "";
     public string TeamFilter { get; internal set; } = "全部球队";
     public Match? SelectedMatch { get; internal set; }
+    public CompactHistory CompactHistory { get; } = new();
     public IReadOnlyList<LiveEntry> Entries { get; internal set; } = [];
     public IReadOnlyList<LiveEntry> FrozenEntries { get; internal set; } = [];
     public bool Following { get; internal set; } = true;
@@ -44,6 +45,7 @@ public sealed class LiveSession(ILiveService service, UserSettings settings, Act
     public void UpdateSettings(UserSettings value)
     {
         State.Settings = value.Normalize();
+        State.CompactHistory.Scroll(0, State.Entries, Math.Max(1, State.Settings.Rows - 1));
         try { if (!State.Demo) persist?.Invoke(State.Settings); State.PreferencesError = ""; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { State.PreferencesError = $"偏好保存失败：{error.Message}"; }
         Notify();
@@ -78,6 +80,7 @@ public sealed class LiveSession(ILiveService service, UserSettings settings, Act
         if (disposed) return;
         if (State.SelectedMatch?.Id == match.Id) { Notify(); return; }
         CancelLive();
+        State.CompactHistory.Reset();
         State.SelectedMatch = match; State.Entries = []; State.FrozenEntries = []; State.Following = true; State.Unread = 0;
         State.MatchError = ""; State.TextError = ""; State.ScoreUpdatedAt = null; State.TextUpdatedAt = null; State.LoadingLive = true;
         liveKey = null; lastScore = DateTimeOffset.MinValue;
@@ -138,6 +141,9 @@ public sealed class LiveSession(ILiveService service, UserSettings settings, Act
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
     }
+    public void ScrollCompact(int steps) { State.CompactHistory.Move(steps, State.Entries); Notify(); }
+    public void ScrollCompactPixels(double distance) { State.CompactHistory.Scroll(distance, State.Entries, Math.Max(1, State.Settings.Rows - 1)); Notify(); }
+    public void FollowCompactLatest() { State.CompactHistory.Reset(); Notify(); }
     public void ToggleFollowing()
     {
         State.Following = !State.Following;

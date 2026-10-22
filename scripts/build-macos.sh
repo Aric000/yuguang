@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 bash "$ROOT/scripts/prepare-macos.sh"
 bash "$ROOT/apps/macos/scripts/build-app.sh"
-VERSION="${1:-0.2.0}"
+VERSION="${1:-0.2.1}"
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo 'Invalid version' >&2; exit 1; fi
 APP="$ROOT/apps/macos/dist/余光.app"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"

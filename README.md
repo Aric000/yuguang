@@ -11,6 +11,7 @@
 余光是一款 NBA 文字直播桌面助手。展开时，它是一张有球队标识、实时比分与比赛动态的精致看板；收起后，它只占屏幕边缘的一小行。代码继续流动，比赛也在继续。
 
 - **文字悬浮，轻盈陪伴**：精简窗口支持 1–6 行；鼠标移开时自动隐去背景、边框和操作按钮，只留下文字。移回即可操作。
+- **精简窗口也能翻历史**：消息按最新在上排列，鼠标滚轮向下连续查看更早的消息，向上回到顶部跟随最新，或点击 `↑` 一键恢复。阅读历史时新消息继续接收，当前文字保持不动；单行、多行均支持，比分固定显示。历史仅限本次比赛会话已接收的最多 500 条消息。
 - **比分始终在线**：窗口首行与菜单／托盘首行显示当前比赛比分和状态；隐藏窗口仍会继续更新。
 - **切换比赛，不打断节奏**：精简窗口右上角的 `⇄` 直接选择比赛和比赛日，无需展开主窗口。
 - **一键收起，随时回来**：默认全局快捷键 `Ctrl + \`` 显示／隐藏窗口，支持在偏好设置中修改；快捷键冲突会提示。
@@ -54,7 +55,7 @@ Mac 需要 macOS、Swift 6+（Xcode 或 Command Line Tools）：
 
 ```bash
 bash scripts/test-macos.sh
-bash scripts/build-macos.sh 0.2.0
+bash scripts/build-macos.sh 0.2.1
 apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
 ```
 
@@ -62,12 +63,12 @@ Windows 需要 .NET 10 SDK；制作安装程序还需要 Inno Setup 6：
 
 ```powershell
 ./scripts/test-windows.ps1
-./scripts/build-windows.ps1 -Version 0.2.0
+./scripts/build-windows.ps1 -Version 0.2.1
 ```
 
 安装包输出到仓库根目录 `release/`。Windows 核心逻辑可在 Mac 上执行 `dotnet run --project apps/windows/Yuguang.Tests`；WPF 的实际窗口诊断在 Windows 上运行。`--demo --self-test` 为明确标识的测试数据，不会写入用户偏好。
 
-推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.2.0` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
+推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.2.1` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
 
 ## 数据与边界
 

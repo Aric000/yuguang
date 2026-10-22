@@ -257,15 +257,21 @@ struct RootView: View {
                         Text(match.score).monospacedDigit().fontWeight(.medium)
                         Text(match.homeTeamName)
                     }.fixedSize()
-                    if model.compactRows == 1 && !model.scoreOnly {
+                    if model.compactRows == 1 && (!model.scoreOnly || model.compactHistory.isReading) {
                         Rectangle().fill(p.edge).frame(width: 1, height: 12).opacity(model.compactChromeVisible ? 1 : 0)
-                        Text(model.latestText).lineLimit(1).truncationMode(.tail).foregroundStyle(p.secondary)
+                        compactMessages(rows: 1, inline: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         Spacer(minLength: 0)
                     }
                     if model.connectionError != nil { Image(systemName: "exclamationmark.circle").help(model.connectionError ?? "") }
                 } else { Text("余光 · 选择比赛"); Spacer() }
+                if model.compactHistory.isReading {
+                    iconButton("arrow.up.to.line", label: "回到最新（\(model.compactUnread) 条新消息）") { model.followCompactLatest() }
+                        .opacity(model.compactChromeVisible ? 1 : 0)
+                        .allowsHitTesting(model.compactChromeVisible)
+                        .accessibilityHidden(!model.compactChromeVisible)
+                }
                 iconButton("arrow.up.left.and.arrow.down.right", label: "展开直播") { model.onToggleCompact?() }
                     .opacity(model.compactChromeVisible ? 1 : 0)
                     .allowsHitTesting(model.compactChromeVisible)
@@ -276,19 +282,7 @@ struct RootView: View {
                     .accessibilityHidden(!model.compactChromeVisible)
             }.frame(height: 32)
             if model.compactRows > 1 {
-                ForEach(0..<(model.compactRows - 1), id: \.self) { index in
-                    HStack(spacing: 10) {
-                        if index < model.entries.count {
-                            let entry = model.entries[index]
-                            Text(entry.clock).font(.system(size: 11)).monospacedDigit().foregroundStyle(p.secondary)
-                            Text(entry.content).lineLimit(1).truncationMode(.tail)
-                                .foregroundStyle(index == 0 ? p.ink : p.secondary)
-                        } else if index == 0 {
-                            Text(model.latestText).foregroundStyle(p.secondary).lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                    }.frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32, alignment: .leading)
-                }
+                compactMessages(rows: model.compactRows - 1, inline: false)
             }
         }.font(.system(size: 12)).padding(.horizontal, 12)
             .contentShape(Rectangle())
@@ -296,7 +290,7 @@ struct RootView: View {
                 GeometryReader { proxy in
                     VStack(alignment: .leading, spacing: 0) {
                         DragArea(doubleClick: { model.onToggleCompact?() })
-                            .frame(width: max(0, proxy.size.width - 74), height: 32)
+                            .frame(width: max(0, proxy.size.width - (model.compactHistory.isReading ? 108 : 74)), height: 32)
                         if model.compactRows > 1 {
                             DragArea(doubleClick: { model.onToggleCompact?() })
                                 .frame(width: proxy.size.width, height: max(0, proxy.size.height - 32))
@@ -304,7 +298,9 @@ struct RootView: View {
                     }.accessibilityHidden(true)
                 }
             }
+            .background(CompactWheelObserver(action: model.scrollCompactPixels))
             .contextMenu {
+                if model.compactHistory.isReading { Button("回到最新", action: model.followCompactLatest) }
                 Button("展开直播") { model.onToggleCompact?() }
                 Menu("显示行数") {
                     ForEach(1...6, id: \.self) { count in
@@ -314,7 +310,26 @@ struct RootView: View {
                 Toggle("单行只看比分", isOn: $model.scoreOnly)
                 Toggle("窗口置顶", isOn: $model.pinned)
                 Button("隐藏（\(model.shortcut.label)）") { model.onHide?() }
-            }.help(model.latestText + "\n拖动文字移动 · 双击展开 · " + model.shortcut.label + " 隐藏")
+            }.help((model.compactEntries.first?.content ?? model.latestText) + "\n滚轮查看历史 · 拖动文字移动 · 双击展开 · " + model.shortcut.label + " 隐藏")
+    }
+    private func compactMessages(rows: Int, inline: Bool) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(model.compactEntries.prefix(rows + 1).enumerated()), id: \.element.id) { index, entry in
+                HStack(spacing: 10) {
+                    if !inline { Text(entry.clock).font(.system(size: 11)).monospacedDigit().foregroundStyle(p.secondary) }
+                    Text(entry.content).lineLimit(1).truncationMode(.tail)
+                        .foregroundStyle(inline || index > 0 ? p.secondary : p.ink)
+                    Spacer(minLength: 0)
+                }.frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32, alignment: .leading)
+            }
+            if model.compactEntries.isEmpty {
+                Text(model.latestText).foregroundStyle(p.secondary).lineLimit(1)
+                    .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32, alignment: .leading)
+            }
+        }
+        .offset(y: -model.compactHistory.remainder)
+        .frame(height: CGFloat(rows) * 32, alignment: .top)
+        .clipped()
     }
     private var settings: some View {
         ScrollView {
@@ -455,21 +470,34 @@ private struct ScrollObserver: NSViewRepresentable {
     func updateNSView(_ view: ObserverView, context: Context) { view.action = action }
     static func dismantleNSView(_ view: ObserverView, coordinator: ()) { view.stopObserving() }
 }
+private struct CompactWheelObserver: NSViewRepresentable {
+    let action: (Double) -> Void
+    func makeNSView(context: Context) -> ObserverView { let view = ObserverView(); view.stepAction = action; return view }
+    func updateNSView(_ view: ObserverView, context: Context) { view.stepAction = action }
+    static func dismantleNSView(_ view: ObserverView, coordinator: ()) { view.stopObserving() }
+}
 private final class ObserverView: NSView {
     var action: (() -> Void)?
+    var stepAction: ((Double) -> Void)?
     private var monitor: Any?
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
         guard window != nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
-            MainActor.assumeIsolated {
-                if let self, event.window === self.window,
-                   self.bounds.contains(self.convert(event.locationInWindow, from: nil)), abs(event.scrollingDeltaY) > 0.1 {
-                    self.action?()
+            let consumed = MainActor.assumeIsolated { () -> Bool in
+                guard let self, event.window === self.window,
+                      self.bounds.contains(self.convert(event.locationInWindow, from: nil)) else { return false }
+                if let stepAction = self.stepAction {
+                    // AppKit reports downward wheel/trackpad motion as negative Y.
+                    let distance = -Double(event.scrollingDeltaY) * (event.hasPreciseScrollingDeltas ? 1 : 32)
+                    if distance != 0 { stepAction(max(-96, min(96, distance))) }
+                    return true
                 }
+                if abs(event.scrollingDeltaY) > 0.1 { self.action?() }
+                return false
             }
-            return event
+            return consumed ? nil : event
         }
     }
     func stopObserving() {

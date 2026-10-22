@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: bash scripts/test-macos.sh
-      - run: bash scripts/build-macos.sh 0.2.0
+      - run: bash scripts/build-macos.sh 0.2.1
       - name: Native window diagnostics
         run: apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
       - uses: actions/upload-artifact@v7
@@ -35,9 +35,9 @@ jobs:
       - name: Core and native WPF diagnostics
         run: ./scripts/test-windows.ps1
       - name: Build portable and installer
-        run: ./scripts/build-windows.ps1 -Version 0.2.0
+        run: ./scripts/build-windows.ps1 -Version 0.2.1
       - name: Check portable app and installed app
-        run: ./scripts/check-package-windows.ps1 -Version 0.2.0
+        run: ./scripts/check-package-windows.ps1 -Version 0.2.1
       - uses: actions/upload-artifact@v7
         with:
           name: Yuguang-windows-x64

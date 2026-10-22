@@ -294,12 +294,21 @@ final class LivePanel: NSPanel {
         toggleCompact()
         let saved = panel.frame
         check(model.compact && panel.frame.height == 32, "Compact window is 32 pt")
+        model.scrollCompact(1)
+        check(model.compactHistory.isReading && model.compactEntries.first?.id == "3", "Compact wheel navigation shows previous message")
+        let readingID = model.compactEntries.first?.id
+        model.entries.insert(LiveEntry(id: "history-test-new", content: "new text", time: "", nickName: ""), at: 0)
+        check(model.compactEntries.first?.id == readingID && model.compactUnread == 1, "New messages preserve compact reading position")
+        model.followCompactLatest()
+        check(!model.compactHistory.isReading && model.compactEntries.first?.id == "history-test-new", "Return to latest resumes compact updates")
+        model.scrollCompact(1)
         model.compactRows = 3
         check(panel.frame.height == 96 && panel.frame.maxY == saved.maxY, "Three rows resize to 96 pt and preserve top edge")
         if let alternate = model.switchableMatches.first(where: { $0.id != model.selectedMatch?.id }) {
             let before = panel.frame
             model.select(alternate)
             check(model.compact && panel.frame == before && model.selectedMatch?.id == alternate.id, "Quick match selection keeps compact mode, size and position")
+            check(!model.compactHistory.isReading, "Switching matches clears compact history")
         }
         model.compactRows = 6
         check(panel.frame.height == 192, "Six rows resize to 192 pt")

@@ -3,6 +3,35 @@ import Foundation
 @testable import YuguangCore
 
 struct CoreTests {
+    @Test func compactHistoryKeepsPositionAcrossNewBatches() {
+        let original = (0..<5).map { LiveEntry(id: "\($0)", content: "message \($0)", time: "", nickName: "") }
+        var history = CompactHistory()
+        history.move(1, live: original)
+        #expect(history.isReading)
+        #expect(history.visibleEntries(original).first?.id == "1")
+        let incoming = [LiveEntry(id: "new", content: "new message", time: "", nickName: "")] + original
+        #expect(history.visibleEntries(incoming).first?.id == "1")
+        #expect(history.unreadCount(incoming) == 1)
+        history.move(500, live: incoming)
+        #expect(history.visibleEntries(incoming).first?.id == "4")
+        history.move(-500, live: incoming)
+        #expect(!history.isReading)
+        #expect(history.visibleEntries(incoming).first?.id == "new")
+        #expect(history.unreadCount(incoming) == 0)
+        history.scroll(5.5, live: original, visibleRows: 3)
+        #expect(history.position == 5.5 && history.offset == 0 && history.remainder == 5.5)
+        #expect(history.visibleEntries(incoming).first?.id == "0")
+        history.scroll(500, live: incoming, visibleRows: 3)
+        #expect(history.position == 64 && history.visibleEntries(incoming).count == 3)
+        history.scroll(-500, live: incoming, visibleRows: 3)
+        #expect(!history.isReading)
+        history.scroll(10, live: original, visibleRows: 6)
+        #expect(!history.isReading)
+        history.move(1, live: [])
+        #expect(!history.isReading)
+        history.move(1, live: Array(original.prefix(1)))
+        #expect(!history.isReading)
+    }
     @Test func testTeamVisualIdentityFromAPI() throws {
         let data = Data(#"{"result":{"matchId":"123","matchStatus":"INPROGRESS","homeTeamName":"勇士","awayTeamName":"湖人","homeTeamLogo":"http://example.com/warriors.png","awayTeamDayColor":"552583","homeTeamNightColor":"FFC72C","competitionStageDesc":"常规赛"}}"#.utf8)
         let match = try HupuAPI.decode(Match.self, from: data)
