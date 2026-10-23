@@ -20,6 +20,17 @@
 - **更纯粹的精简模式**：设置中启用后，启动即为精简窗口，并隐藏球队 Logo；临时展开也保留这一偏好。
 - **尊重专注**：没有声音、推送或账户注册。网络异常保留已获取内容，界面明确显示连接状态；演示数据仅在显式诊断模式使用。
 
+## Mac：让资讯，也留在余光里
+
+在窗口右上角点击 `⇄ → 社区板块`，可进入篮球资讯、主队专区、步行街等公开板块，保持精简窗口浏览。
+
+- **只关注你在意的球队**：设置「我的主队」支持多选，队徽与 `＋` 打开独立搜索弹窗；完成后统一保存。篮球资讯默认只看主队，可切回全部。
+- **向下看，不断篇**：列表按设置显示 1–6 条帖子，另有一行工具栏；向下滚动连续加载、按帖子 ID 去重。支持最新发布、已加载帖子的回复数排序和刷新。
+- **读完，还在原处**：打开正文与评论，返回保留列表位置；已读帖子置灰。精简阅读默认纯文字，可启用图片或展开阅读。
+- **高亮评论在前**：评论显示「亮了 N」，官方高亮与已加载评论合并去重、按亮数降序；可继续加载并重排。
+
+社区功能当前仅在 **macOS** 提供，Windows 本版仍提供 NBA 文字直播。主队资讯按标题与正文中的球队名匹配，并非官方球队标签；动态分页可能遗漏翻页期间移动的帖子。社区列表每次浏览最多缓存 1000 条，已读保留最近 2000 条。公开页面可能要求验证或调整结构，遇到限制会提示重试，不使用演示内容替代。操作和数据边界详见[社区浏览说明](docs/COMMUNITY.md)。
+
 ## 两个平台，各自原生
 
 **一个仓库，两套原生客户端。** macOS 使用 SwiftUI / AppKit，保留系统字体、菜单栏与原生窗口手感；Windows 使用 C# / WPF，使用系统文字渲染、原生托盘与全局快捷键。共用品牌资产、30 支球队图标与数据接口规范。
@@ -55,7 +66,7 @@ Mac 需要 macOS、Swift 6+（Xcode 或 Command Line Tools）：
 
 ```bash
 bash scripts/test-macos.sh
-bash scripts/build-macos.sh 0.2.1
+bash scripts/build-macos.sh 0.3.0
 apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
 ```
 
@@ -63,12 +74,18 @@ Windows 需要 .NET 10 SDK；制作安装程序还需要 Inno Setup 6：
 
 ```powershell
 ./scripts/test-windows.ps1
-./scripts/build-windows.ps1 -Version 0.2.1
+./scripts/build-windows.ps1 -Version 0.3.0
 ```
 
-安装包输出到仓库根目录 `release/`。Windows 核心逻辑可在 Mac 上执行 `dotnet run --project apps/windows/Yuguang.Tests`；WPF 的实际窗口诊断在 Windows 上运行。`--demo --self-test` 为明确标识的测试数据，不会写入用户偏好。
+安装包输出到仓库根目录 `release/`。Windows 核心逻辑可在 Mac 上执行 `dotnet run --project apps/windows/Yuguang.Tests`；WPF 的实际窗口诊断在 Windows 上运行。`--demo --self-test` 为明确标识的测试数据，结束时会恢复用户偏好。Mac 社区状态检查使用 `--check-forum-model`；真实网页连通性可用 `--check-forum` 抽查。
 
-推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.2.1` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
+推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.3.0` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
+
+## 项目发布 Skill
+
+在本仓库的 Codex 会话中使用 `$yuguang-release`，例如：「使用 $yuguang-release review 当前改动，修复后提交并发布下一个版本」。流程涵盖审查、本地验证、双端 CI、Release 附件与 SHA-256 核验。仅要求 review 或本地修改时不会自动发布。
+
+入口：[.agents/skills/yuguang-release/SKILL.md](.agents/skills/yuguang-release/SKILL.md)。
 
 ## 数据与边界
 

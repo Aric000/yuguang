@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import WebKit
 import YuguangCore
 
 final class LivePanel: NSPanel {
@@ -18,11 +19,11 @@ final class LivePanel: NSPanel {
     private var menuTitle: NSMenuItem?
     private var localMouseMonitor: Any?
     private var globalMouseMonitor: Any?
-    private let diagnosticKeys = ["lastMatch", "pinned", "compactRows", "simpleModeEnabled", "theme", "expandedFrame", "compactFrame"]
+    private let diagnosticKeys = ["lastMatch", "pinned", "compactRows", "simpleModeEnabled", "theme", "expandedFrame", "compactFrame", "forumReadIDs", "favoriteTeams", "onlyFavoriteNews"]
     private var diagnosticPreferences: [String: Any]?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if CommandLine.arguments.contains("--self-test") || CommandLine.arguments.contains("--capture") {
+        if CommandLine.arguments.contains("--self-test") || CommandLine.arguments.contains("--capture") || CommandLine.arguments.contains("--forum-capture") {
             diagnosticPreferences = Dictionary(uniqueKeysWithValues: diagnosticKeys.compactMap { key in
                 UserDefaults.standard.object(forKey: key).map { (key, $0) }
             })
@@ -72,7 +73,16 @@ final class LivePanel: NSPanel {
         changingFrame = false
         if model.simpleModeEnabled { toggleCompact() }
         show()
-        if !demo { model.start() }
+        let forumPreview = CommandLine.arguments.contains("--forum-preview") || CommandLine.arguments.contains("--forum-capture")
+        if !demo && !CommandLine.arguments.contains("--forum-capture") { model.start() }
+        if forumPreview, let board = ForumBoard.catalog.first(where: { $0.path == "/502" }) {
+            model.selectBoard(board)
+            if !model.compact { toggleCompact() }
+        }
+        if let index = CommandLine.arguments.firstIndex(of: "--forum-capture"), CommandLine.arguments.count > index + 1 {
+            let directory = CommandLine.arguments[index + 1]
+            Task { [weak self] in await self?.captureForum(to: directory); NSApp.terminate(nil) }
+        }
         if CommandLine.arguments.contains("--self-test") {
             Task { [weak self] in
                 try? await Task.sleep(for: .milliseconds(200))
@@ -226,13 +236,13 @@ final class LivePanel: NSPanel {
         if let panel { model.compactHovered = panel.frame.contains(NSEvent.mouseLocation) }
         NSApp.unhide(nil); panel?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     }
-    private func hide() { model.isRecordingShortcut = false; panel?.orderOut(nil); NSApp.hide(nil) }
+    private func hide() { model.cancelTeamSelection(); model.isRecordingShortcut = false; panel?.orderOut(nil); NSApp.hide(nil) }
     private func toggleVisibility() { if panel?.isVisible == true { hide() } else { show() } }
     @objc private func toggleFromMenu() { toggleVisibility() }
-    @objc private func compactFromMenu() { if model.selectedMatch != nil { toggleCompact() }; show() }
+    @objc private func compactFromMenu() { if model.selectedMatch != nil || model.showingForum { toggleCompact() }; show() }
     @objc private func chooseMatch() {
         if model.compact { toggleCompact() }
-        model.page = .matches; show()
+        model.showingForum = false; model.page = .matches; show()
     }
     @objc private func openSettings() {
         if model.compact { toggleCompact() }
@@ -336,10 +346,80 @@ final class LivePanel: NSPanel {
         check(!model.compact && model.simpleModeEnabled, "Temporary expansion preserves the simple-mode preference and hides team crests")
         model.simpleModeEnabled = false
         check(!model.compact, "Disabling simple mode restores the full window")
+        toggleCompact()
+        model.compactRows = 1; model.showingForum = true
+        check(panel.frame.height == 64, "Forum one-row view reserves a toolbar plus one topic")
+        let forumTop = panel.frame.maxY
+        model.compactRows = 4
+        check(panel.frame.height == 160 && panel.frame.maxY == forumTop, "Forum row settings preserve the top edge")
+        model.showingForum = false
+        check(panel.frame.height == 128, "Returning to live restores the live row height")
+        toggleCompact()
         print("Window checks complete")
         model.compactRows = preferredRows
         model.simpleModeEnabled = preferredSimpleMode
         NSApp.terminate(nil)
+    }
+
+    private func captureForum(to directory: String) async {
+        try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        func settle() async { try? await Task.sleep(for: .milliseconds(700)) }
+        func capture(_ name: String, window: NSWindow? = nil) {
+            guard let view = (window ?? panel)?.contentView else { return }
+            view.layoutSubtreeIfNeeded()
+            guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            if let data = bitmap.representation(using: .png, properties: [:]) {
+                try? data.write(to: URL(fileURLWithPath: directory).appendingPathComponent(name + ".png"))
+            }
+        }
+        model.onlyFavoriteNews = false
+        while model.forum.loading { try? await Task.sleep(for: .milliseconds(100)) }
+        model.compactRows = 4; model.theme = "light"; model.compactHovered = true
+        await settle(); model.compactHovered = true; capture("forum-list-light")
+        model.theme = "dark"; await settle(); model.compactHovered = true; capture("forum-list-dark")
+        for attempt in 1...3 {
+            let initialPage = model.forum.current
+            model.forum.scrollID = model.forum.ordered.last?.id
+            let deadline = Date(timeIntervalSinceNow: 8)
+            while (model.forum.current <= initialPage || model.forum.loading) && Date() < deadline {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            print("UI 连续滚动第 \(attempt) 次：\(initialPage) → \(model.forum.current) 页，\(model.forum.topics.count) 条")
+            await settle(); model.compactHovered = true; capture("forum-scrolled-\(attempt)")
+        }
+        let listPosition = model.forum.scrollID
+        if let topic = model.forum.ordered.first(where: { $0.replies > 20 }) ?? model.forum.ordered.first {
+            model.forum.open(topic)
+            while model.forum.detailLoading { try? await Task.sleep(for: .milliseconds(100)) }
+            await settle(); model.compactHovered = true; capture("forum-detail")
+            func reader(in view: NSView) -> WKWebView? {
+                if let web = view as? WKWebView { return web }
+                return view.subviews.compactMap { reader(in: $0) }.first
+            }
+            if let content = panel?.contentView, let web = reader(in: content) {
+                _ = try? await web.evaluateJavaScript("document.querySelector('h2')?.scrollIntoView()")
+                await settle(); model.compactHovered = true; capture("forum-comment-likes")
+                _ = try? await web.evaluateJavaScript("window.scrollTo(0,0)")
+            }
+            model.compactRows = 1; await settle(); model.compactHovered = true; capture("forum-detail-one-row")
+            model.compactRows = 4
+            model.forum.back(); await settle(); model.compactHovered = true; capture("forum-read")
+            print("UI 返回位置：\(listPosition == model.forum.scrollID ? "保持" : "已改变")")
+        }
+        model.compactHovered = false; await settle(); model.compactHovered = false; capture("forum-transparent")
+        model.onlyFavoriteNews = false
+        model.favoriteTeams = ["湖人", "骑士"]
+        if model.compact { toggleCompact() }
+        model.page = .settings; model.theme = "light"
+        await settle(); capture("favorite-settings")
+        model.beginTeamSelection()
+        await settle()
+        if let sheet = panel?.attachedSheet {
+            capture("favorite-picker", window: sheet)
+            print("UI 主队独立弹窗：已显示")
+        } else { print("FAIL: 主队弹窗未显示") }
+        model.cancelTeamSelection(); await settle()
     }
 
     private func captureAll(to directory: String) {
@@ -398,6 +478,40 @@ final class LivePanel: NSPanel {
 
 @main enum YuguangApp {
     @MainActor static func main() {
+        if CommandLine.arguments.contains("--check-forum-model") {
+            Task {
+                do { try await ForumModelChecks.run(); exit(0) }
+                catch { fputs("社区状态验证失败：\(error.localizedDescription)\n", stderr); exit(1) }
+            }
+            RunLoop.main.run(); return
+        }
+        if CommandLine.arguments.contains("--check-forum") {
+            Task {
+                do {
+                    let api = HupuForum()
+                    guard let board = ForumBoard.catalog.first(where: { $0.path == "/502" }) else { throw ForumError.invalidPath }
+                    let first = try await api.topics(board: board, page: 1)
+                    let second = try await api.topics(board: board, page: 2)
+                    guard first.current == 1, second.current == 2, !first.topics.isEmpty, !second.topics.isEmpty else { throw ForumError.changedPage }
+                    let merged = HupuForum.unique(first.topics + second.topics)
+                    print("板块：\(board.title)；两页：\(first.topics.count)+\(second.topics.count)，去重后 \(merged.count)")
+                    guard let topic = merged.first(where: { $0.replies > 20 }) ?? merged.first else { throw ForumError.changedPage }
+                    let detail = try await api.detail(id: topic.id, page: 1)
+                    let likes = detail.comments.map(\.likes)
+                    guard likes == likes.sorted(by: >) else { throw ForumError.changedPage }
+                    print("正文 \(detail.html.count) 字符，评论 \(detail.comments.count) 条，共 \(detail.total) 页；高亮降序 \(Array(likes.prefix(5)))")
+                    let filtered = try await api.filterNews(Array(first.topics.prefix(12)), teams: ["76人", "骑士"])
+                    print("真实主队筛选：12 条中保留 \(filtered.topics.count) 条，无法识别 \(filtered.unavailable) 条")
+                    if detail.total > 1 {
+                        let next = try await api.detail(id: topic.id, page: 2)
+                        guard next.current == 2 else { throw ForumError.changedPage }
+                        print("第二页评论：\(next.comments.count) 条")
+                    }
+                    exit(0)
+                } catch { fputs("社区验证失败：\(error.localizedDescription)\n", stderr); exit(1) }
+            }
+            RunLoop.main.run(); return
+        }
         if CommandLine.arguments.contains("--check-api") {
             Task {
                 do {

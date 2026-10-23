@@ -19,7 +19,9 @@ struct RootView: View {
     private var p: Palette { Palette(dark: scheme == .dark) }
     var body: some View {
         Group {
-            if model.compact { compactBar }
+            if model.compact {
+                if model.showingForum { ForumView(model: model) } else { compactBar }
+            }
             else {
                 VStack(spacing: 0) {
                     titleBar
@@ -28,6 +30,7 @@ struct RootView: View {
                         case .matches: matchList
                         case .live: liveView
                         case .settings: settings
+                        case .forum: ForumView(model: model)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -45,6 +48,7 @@ struct RootView: View {
         .clipShape(RoundedRectangle(cornerRadius: model.compact ? 8 : 20))
         .tint(p.ink)
         .preferredColorScheme(model.colorScheme)
+        .sheet(isPresented: $model.choosingFavoriteTeams) { FavoriteTeamPicker(model: model) }
     }
     private var titleBar: some View {
         HStack(spacing: 10) {
@@ -58,18 +62,19 @@ struct RootView: View {
             // SwiftUI hosting consumes background mouse events; use an explicit native drag surface.
             // Keep it within the leading region so title-bar buttons retain their own hit targets.
             .overlay { DragArea().accessibilityHidden(true) }
-            if model.selectedMatch != nil {
+            QuickMatchButton(model: model).frame(width: 24, height: 26)
+            if model.selectedMatch != nil || model.showingForum {
                 iconButton("rectangle.compress.vertical", label: "精简模式（\(model.compactRows) 行）") { model.onToggleCompact?() }
             }
             iconButton(model.page == .settings ? "arrow.left" : "slider.horizontal.3", label: model.page == .settings ? "返回" : "设置") {
-                model.page = model.page == .settings ? (model.selectedMatch == nil ? .matches : .live) : .settings
+                model.page = model.page == .settings ? (model.showingForum ? .forum : (model.selectedMatch == nil ? .matches : .live)) : .settings
             }
             iconButton("xmark", label: "隐藏窗口（\(model.shortcut.label)）") { model.onHide?() }
         }.padding(.horizontal, 16).frame(height: 48)
     }
     private var footer: some View {
         HStack {
-            Text(model.page == .settings ? "更改自动保存" : "文字直播 · 来源虎扑")
+            Text(model.page == .settings ? "更改自动保存" : (model.showingForum ? "社区浏览 · 来源虎扑" : "文字直播 · 来源虎扑"))
             Spacer()
             Text("\(model.shortcut.label) 隐藏 / 恢复")
         }.font(.system(size: 11)).foregroundStyle(p.secondary)
@@ -344,6 +349,7 @@ struct RootView: View {
                             .font(.system(size: 11)).foregroundStyle(p.secondary)
                     }
                 }
+                favoriteTeamSettings
                 VStack(alignment: .leading, spacing: 10) {
                     Text("全局隐藏快捷键").fontWeight(.medium)
                     Text("随时隐藏，再按一次恢复。录制时按 Esc 取消。")
@@ -376,7 +382,7 @@ struct RootView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 5) {
                             Text("精简模式显示行数").font(.system(size: 13, weight: .medium))
-                            Text("1–6 行，包含比分行；多行时显示最新解说。")
+                            Text("1–6 行；直播包含比分行，社区显示对应条数（另加工具栏）。")
                                 .font(.system(size: 12)).foregroundStyle(p.secondary)
                         }
                         Spacer()
@@ -393,6 +399,38 @@ struct RootView: View {
                         .font(.system(size: 12)).lineSpacing(4).foregroundStyle(p.secondary)
                 }.padding(.top, 4)
             }.padding(20)
+        }
+    }
+    private var favoriteTeamSettings: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("我的主队").font(.system(size: 13, weight: .medium))
+                    Text(model.favoriteTeams.isEmpty ? "添加主队 · 支持多选" : "已选 \(model.favoriteTeams.count) 支 · 点击更改")
+                        .font(.system(size: 12)).foregroundStyle(p.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Button(action: model.beginTeamSelection) {
+                    HStack(spacing: 4) {
+                        ForEach(Array(model.favoriteTeams.sorted().prefix(4)), id: \.self) { team in
+                            TeamBadge(name: team, size: 24)
+                                .frame(width: 30, height: 30)
+                                .background(p.sheet, in: Circle())
+                        }
+                        if model.favoriteTeams.count > 4 {
+                            Text("+\(model.favoriteTeams.count - 4)")
+                                .font(.system(size: 10, weight: .medium)).monospacedDigit().foregroundStyle(p.secondary)
+                        }
+                        Image(systemName: "plus").font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(p.secondary).frame(width: 28, height: 28)
+                            .background(p.raised.opacity(0.6), in: Circle())
+                            .overlay(Circle().strokeBorder(p.edge, style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
+                    }.padding(.vertical, 3).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                    .help(model.favoriteTeams.isEmpty ? "添加我的主队" : model.favoriteTeams.sorted().joined(separator: "、") + " · 点击添加或更改")
+                    .accessibilityLabel(model.favoriteTeams.isEmpty ? "添加主队" : "更改我的主队：" + model.favoriteTeams.sorted().joined(separator: "、"))
+            }
+            settingToggle("篮球资讯只看主队", detail: "默认开启；匹配所选球队的资讯标题和正文。", value: $model.onlyFavoriteNews)
         }
     }
     private func settingToggle(_ title: String, detail: String, value: Binding<Bool>) -> some View {

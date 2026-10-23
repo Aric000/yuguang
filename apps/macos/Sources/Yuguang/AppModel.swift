@@ -4,12 +4,38 @@ import YuguangCore
 
 @MainActor @Observable
 final class AppModel {
+    let forum = ForumModel()
+    var showingForum = false { didSet { if showingForum != oldValue { onWindowChange?() } } }
+    func selectBoard(_ board: ForumBoard) {
+        forum.choose(board); showingForum = true; page = .forum
+    }
     let service: any LiveService
     var days: [GameDay] = []
     var selectedDay = ""
     var teamFilter = "全部球队"
     var favoriteTeams: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "favoriteTeams") ?? []) {
-        didSet { UserDefaults.standard.set(Array(favoriteTeams).sorted(), forKey: "favoriteTeams") }
+        didSet {
+            UserDefaults.standard.set(Array(favoriteTeams).sorted(), forKey: "favoriteTeams")
+            forum.configureFavorites(favoriteTeams, onlyNews: onlyFavoriteNews)
+        }
+    }
+    var choosingFavoriteTeams = false
+    var favoriteTeamDraft: Set<String> = []
+    var favoriteTeamSearch = ""
+    func beginTeamSelection() {
+        favoriteTeamDraft = favoriteTeams; favoriteTeamSearch = ""; choosingFavoriteTeams = true
+    }
+    func toggleDraftTeam(_ team: String) {
+        if favoriteTeamDraft.contains(team) { favoriteTeamDraft.remove(team) }
+        else { favoriteTeamDraft.insert(team) }
+    }
+    func cancelTeamSelection() { choosingFavoriteTeams = false }
+    func saveTeamSelection() { favoriteTeams = favoriteTeamDraft; choosingFavoriteTeams = false }
+    var onlyFavoriteNews = UserDefaults.standard.object(forKey: "onlyFavoriteNews") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(onlyFavoriteNews, forKey: "onlyFavoriteNews")
+            forum.configureFavorites(favoriteTeams, onlyNews: onlyFavoriteNews)
+        }
     }
     var selectedMatch: Match?
     var entries: [LiveEntry] = []
@@ -42,7 +68,7 @@ final class AppModel {
     var compactRows = min(6, max(1, UserDefaults.standard.object(forKey: "compactRows") as? Int ?? 1)) {
         didSet { compactHistory.scroll(0, live: entries, visibleRows: max(1, compactRows - 1)); UserDefaults.standard.set(compactRows, forKey: "compactRows"); onWindowChange?() }
     }
-    var compactHeight: CGFloat { CGFloat(compactRows) * 32 }
+    var compactHeight: CGFloat { CGFloat(compactRows + (showingForum ? 1 : 0)) * 32 }
     var compactHovered = false {
         didSet { if compactHovered != oldValue { onWindowChange?() } }
     }
@@ -82,7 +108,7 @@ final class AppModel {
     @ObservationIgnored private var failures = 0
     @ObservationIgnored var demo = false
 
-    enum Page { case matches, live, settings }
+    enum Page { case matches, live, settings, forum }
     init(service: any LiveService = HupuAPI()) { self.service = service }
     var allMatches: [Match] { days.flatMap(\.matchList) }
     var teams: [String] { Set(allMatches.flatMap { [$0.homeTeamName, $0.awayTeamName] }).sorted() }
@@ -116,7 +142,7 @@ final class AppModel {
             }
         }
     }
-    func stop() { polling?.cancel(); schedulePolling?.cancel() }
+    func stop() { polling?.cancel(); schedulePolling?.cancel(); forum.stop() }
     func refreshSchedule(restore: Bool = false) async {
         guard !demo else { return }
         scheduleGeneration += 1
@@ -132,7 +158,7 @@ final class AppModel {
                 if !days.contains(where: { $0.day == selectedDay }) { selectedDay = days.first?.day ?? "" }
             }
             scheduleError = nil
-            if restore, let saved = UserDefaults.standard.string(forKey: "lastMatch"), let match = allMatches.first(where: { $0.id == saved }) {
+            if restore, !showingForum, let saved = UserDefaults.standard.string(forKey: "lastMatch"), let match = allMatches.first(where: { $0.id == saved }) {
                 select(match)
             }
         } catch {
@@ -141,6 +167,7 @@ final class AppModel {
         }
     }
     func select(_ match: Match) {
+        showingForum = false
         if selectedMatch?.id == match.id { page = .live; return }
         polling?.cancel(); selectionGeneration += 1
         compactHistory.reset()

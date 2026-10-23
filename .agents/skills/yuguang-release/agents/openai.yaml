@@ -1,0 +1,4 @@
+interface:
+  display_name: "余光审查与发版"
+  short_description: "审查余光改动、验证双端构建、推送代码并确认 GitHub Release 安装包"
+  default_prompt: "使用 $yuguang-release 审查当前改动，修复问题后提交并发布下一个版本，确认安装包可下载。"

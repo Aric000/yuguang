@@ -30,6 +30,7 @@ jobs:
         run: |
           bash scripts/test-macos.sh
           bash scripts/build-macos.sh "${RELEASE_TAG#v}"
+          apps/macos/dist/余光.app/Contents/MacOS/Yuguang --check-forum-model
           apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
       - name: Test and package Windows
         if: runner.os == 'Windows'
