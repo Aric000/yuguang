@@ -20,7 +20,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if model.compact {
-                if model.showingForum { ForumView(model: model) } else { compactBar }
+                if model.showingStats { MatchStatsView(model: model) } else if model.showingForum { ForumView(model: model) } else { compactBar }
             }
             else {
                 VStack(spacing: 0) {
@@ -28,7 +28,7 @@ struct RootView: View {
                     Group {
                         switch model.page {
                         case .matches: matchList
-                        case .live: liveView
+                        case .live: if model.showingStats { MatchStatsView(model: model) } else { liveView }
                         case .settings: settings
                         case .forum: ForumView(model: model)
                         }
@@ -395,7 +395,7 @@ struct RootView: View {
                 }
                 VStack(alignment: .leading, spacing: 7) {
                     Text("安静地看一场球。").font(.system(size: 14, weight: .medium))
-                    Text("余光 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0") · NBA 文字直播\n无声音、无推送、不抢输入焦点。\n数据由虎扑提供，可能存在延迟。")
+                    Text("余光 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.0") · NBA 文字直播\n无声音、无推送、不抢输入焦点。\n数据由虎扑提供，可能存在延迟。")
                         .font(.system(size: 12)).lineSpacing(4).foregroundStyle(p.secondary)
                 }.padding(.top, 4)
             }.padding(20)

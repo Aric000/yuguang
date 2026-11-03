@@ -7,13 +7,13 @@ struct QuickMatchButton: NSViewRepresentable {
     let model: AppModel
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
     func makeNSView(context: Context) -> NSButton {
-        let image = NSImage(systemSymbolName: "arrow.left.arrow.right", accessibilityDescription: "切换比赛或板块") ?? NSImage()
+        let image = NSImage(systemSymbolName: "arrow.left.arrow.right", accessibilityDescription: "切换比赛、统计或新闻") ?? NSImage()
         let button = NSButton(image: image, target: context.coordinator, action: #selector(Coordinator.open(_:)))
         button.isBordered = false
         button.imageScaling = .scaleProportionallyDown
         button.contentTintColor = .labelColor
-        button.setAccessibilityLabel("切换比赛或板块")
-        button.toolTip = "切换比赛 / 社区板块 · 保持精简模式"
+        button.setAccessibilityLabel("切换比赛、统计或新闻")
+        button.toolTip = "切换数据统计 / 主队新闻 / 比赛 / 社区板块 · 保持精简模式"
         return button
     }
     func updateNSView(_ view: NSButton, context: Context) {}
@@ -29,6 +29,16 @@ struct QuickMatchButton: NSViewRepresentable {
                 model.compactHovered = sender.window?.frame.contains(NSEvent.mouseLocation) ?? false
             }
             let menu = NSMenu()
+            let stats = NSMenuItem(title: "数据统计", action: #selector(openStats), keyEquivalent: "")
+            stats.target = self; stats.isEnabled = model.selectedMatch != nil
+            stats.state = model.showingStats ? .on : .off; menu.addItem(stats)
+            let news = NSMenuItem(title: "主队新闻列表", action: #selector(openFavoriteNews), keyEquivalent: "")
+            news.target = self
+            news.state = model.showingForum && model.forum.board?.path == "/502" && model.onlyFavoriteNews ? .on : .off
+            menu.addItem(news)
+            let teams = NSMenuItem(title: "更改我的主队…", action: #selector(chooseFavoriteTeams), keyEquivalent: "")
+            teams.target = self; menu.addItem(teams)
+            menu.addItem(.separator())
             let communities = NSMenu(title: "社区板块")
             let favorites = ForumBoard.catalog.filter { board in model.favoriteTeams.contains(where: { board.title.contains($0) }) }
             if !favorites.isEmpty {
@@ -46,7 +56,7 @@ struct QuickMatchButton: NSViewRepresentable {
             }
             let communityItem = NSMenuItem(title: "社区板块", action: nil, keyEquivalent: "")
             communityItem.submenu = communities; menu.addItem(communityItem)
-            if model.showingForum {
+            if model.showingForum || model.showingStats {
                 let live = NSMenuItem(title: "回到文字直播", action: #selector(returnToLive), keyEquivalent: "")
                 live.target = self; menu.addItem(live)
             }
@@ -62,7 +72,7 @@ struct QuickMatchButton: NSViewRepresentable {
                 let title = "\(match.awayTeamName) \(match.score) \(match.homeTeamName) · \(match.isUpcoming ? match.startLabel : match.status)"
                 let item = NSMenuItem(title: title, action: #selector(pickMatch(_:)), keyEquivalent: "")
                 item.target = self; item.representedObject = match.id
-                item.state = !model.showingForum && match.id == model.selectedMatch?.id ? .on : .off
+                item.state = !model.showingForum && !model.showingStats && match.id == model.selectedMatch?.id ? .on : .off
                 menu.addItem(item)
             }
             menu.addItem(.separator())
@@ -86,11 +96,19 @@ struct QuickMatchButton: NSViewRepresentable {
             item.state = model.showingForum && model.forum.board == board ? .on : .off
             return item
         }
+        @objc private func openStats() { model.openStats() }
+        @objc private func openFavoriteNews() {
+            guard let board = ForumBoard.catalog.first(where: { $0.path == "/502" }) else { return }
+            model.onlyFavoriteNews = true
+            model.selectBoard(board)
+        }
+        @objc private func chooseFavoriteTeams() { model.beginTeamSelection() }
         @objc private func pickBoard(_ item: NSMenuItem) {
             guard let path = item.representedObject as? String, let board = ForumBoard.catalog.first(where: { $0.path == path }) else { return }
             model.selectBoard(board)
         }
         @objc private func returnToLive() {
+            model.showingStats = false
             model.showingForum = false; model.page = model.selectedMatch == nil ? .matches : .live
         }
         @objc private func pickMatch(_ item: NSMenuItem) {

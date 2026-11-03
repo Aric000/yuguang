@@ -38,6 +38,10 @@ public struct HupuAPI: LiveService {
         try await get(host: "live-api.liangle.com", path: "/1/7.5.60/live/queryLiveTextList",
                       query: ["matchId": matchID, "liveActivityKeyStr": key])
     }
+    public func playerStats(matchID: String, teamID: String) async throws -> PlayerStatsResponse {
+        try await get(host: "games.mobileapi.hupu.com", path: "/1/7.5.29/basketballapi/teamMatchRosterScoreStats",
+                      query: ["matchId": matchID, "teamId": teamID, "userId": ""])
+    }
     public static func url(host: String, path: String, query: [String: String]) throws -> URL {
         var c = URLComponents(); c.scheme = "https"; c.host = host; c.path = path
         c.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
@@ -74,4 +78,38 @@ private struct ResponseStatus: Decodable {
     let success: Bool?
     let errorMsg: String?
     let msg: String?
+}
+
+public struct PlayerStatsResponse: Decodable, Sendable {
+    public let players: [PlayerStatsEntry]
+}
+public struct PlayerStatsEntry: Decodable, Sendable {
+    public let stats: PlayerGameStats?
+}
+public struct PlayerGameStats: Decodable, Sendable, Identifiable {
+    public let playerId: String
+    public let name: String
+    public let mins: String?
+    public let pts: Int?
+    public let reb: Int?
+    public let asts: Int?
+    public let stl: Int?
+    public let blk: Int?
+    public let plusMinus: String?
+    public var id: String { playerId }
+    enum CodingKeys: String, CodingKey {
+        case playerId, name, mins, pts, reb, asts, stl, blk, plusMinus
+    }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        playerId = try c.stringOrInteger(.playerId)
+        name = try c.decode(String.self, forKey: .name)
+        mins = try c.decodeIfPresent(String.self, forKey: .mins)
+        pts = try c.decodeIfPresent(Int.self, forKey: .pts)
+        reb = try c.decodeIfPresent(Int.self, forKey: .reb)
+        asts = try c.decodeIfPresent(Int.self, forKey: .asts)
+        stl = try c.decodeIfPresent(Int.self, forKey: .stl)
+        blk = try c.decodeIfPresent(Int.self, forKey: .blk)
+        plusMinus = try c.decodeIfPresent(String.self, forKey: .plusMinus)
+    }
 }

@@ -22,7 +22,7 @@
 
 ## Mac：让资讯，也留在余光里
 
-在窗口右上角点击 `⇄ → 社区板块`，可进入篮球资讯、主队专区、步行街等公开板块，保持精简窗口浏览。
+精简模式下点击 `⇄ → 主队新闻列表`，可直接打开所选球队的新闻；`⇄ → 更改我的主队…` 可直接打开多选弹窗。点击 `⇄ → 社区板块`，可进入篮球资讯、主队专区、步行街等公开板块，保持精简窗口浏览。
 
 - **只关注你在意的球队**：设置「我的主队」支持多选，队徽与 `＋` 打开独立搜索弹窗；完成后统一保存。篮球资讯默认只看主队，可切回全部。
 - **向下看，不断篇**：列表按设置显示 1–6 条帖子，另有一行工具栏；向下滚动连续加载、按帖子 ID 去重。支持最新发布、已加载帖子的回复数排序和刷新。
@@ -30,6 +30,12 @@
 - **高亮评论在前**：评论显示「亮了 N」，官方高亮与已加载评论合并去重、按亮数降序；可继续加载并重排。
 
 社区功能当前仅在 **macOS** 提供，Windows 本版仍提供 NBA 文字直播。主队资讯按标题与正文中的球队名匹配，并非官方球队标签；动态分页可能遗漏翻页期间移动的帖子。社区列表每次浏览最多缓存 1000 条，已读保留最近 2000 条。公开页面可能要求验证或调整结构，遇到限制会提示重试，不使用演示内容替代。操作和数据边界详见[社区浏览说明](docs/COMMUNITY.md)。
+
+## Mac：精简窗口查看比赛统计
+
+先选择一场比赛，再点击 `⇄ → 数据统计`。球队菜单可切换双方，查看球员上场时间、得分、篮板、助攻、抢断、盖帽和正负值；宽度不足时横向滚动。统计视图至少保留三行内容和一行工具栏，右键可调整为 3–6 行；返回文字直播恢复直播行数。
+
+统计页面打开时每 15 秒刷新，已结束的比赛成功获取后停止轮询；可手动刷新。未开赛或来源未提供统计时显示空状态，失败时保留已有数据并提示重试。统计与主队新闻快捷入口当前仅在 **macOS** 提供，Windows 本版继续提供原有文字直播功能。
 
 ## 两个平台，各自原生
 
@@ -66,7 +72,7 @@ Mac 需要 macOS、Swift 6+（Xcode 或 Command Line Tools）：
 
 ```bash
 bash scripts/test-macos.sh
-bash scripts/build-macos.sh 0.3.0
+bash scripts/build-macos.sh 0.4.0
 apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
 ```
 
@@ -74,12 +80,12 @@ Windows 需要 .NET 10 SDK；制作安装程序还需要 Inno Setup 6：
 
 ```powershell
 ./scripts/test-windows.ps1
-./scripts/build-windows.ps1 -Version 0.3.0
+./scripts/build-windows.ps1 -Version 0.4.0
 ```
 
 安装包输出到仓库根目录 `release/`。Windows 核心逻辑可在 Mac 上执行 `dotnet run --project apps/windows/Yuguang.Tests`；WPF 的实际窗口诊断在 Windows 上运行。`--demo --self-test` 为明确标识的测试数据，结束时会恢复用户偏好。Mac 社区状态检查使用 `--check-forum-model`；真实网页连通性可用 `--check-forum` 抽查。
 
-推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.3.0` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
+推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.4.0` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
 
 ## 项目发布 Skill
 

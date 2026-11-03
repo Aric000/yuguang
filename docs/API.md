@@ -16,3 +16,9 @@ Mac 通过 URLComponents、Windows 通过 Uri.EscapeDataString 编码参数一�
 消息按服务端顺序去重，不按消息 ID 排序；大整数 ID 使用 Swift 无损整数解码或 C# JsonElement.GetRawText 按字符串保留，避免浮点精度丢失。会话最多保留 500 条。切换比赛会取消旧请求，并通过选择代次检查，防止旧比赛响应覆盖新比赛。
 
 接口只返回近期消息，不承诺完整历史；第三方接口不是稳定的公开 SDK，字段、路径与行为可能变更。运行 Mac 应用的 `--check-api` 或 `dotnet run --project apps/windows/Yuguang.Tests -- --check-api` 可验证实际连通性。
+
+## Mac 球员统计
+
+`https://games.mobileapi.hupu.com/1/7.5.29/basketballapi/teamMatchRosterScoreStats?matchId=…&teamId=…&userId=` 返回指定比赛和球队的 `result.players[].stats`。球队 ID 来自赛程或单场比赛，保留为字符串；球员 ID 支持整数及字符串，缺失的统计数值显示为「—」。
+
+统计页面打开时按 15 秒间隔刷新，切换球队或离开页面会取消旧任务；请求身份检查防止旧响应和旧加载状态覆盖新请求。已结束的比赛成功读取一次后停止，失败可手动或定时重试。`--stats-capture /tmp/yuguang-stats` 可用当前真实比赛验证双方数据并保存原生窗口截图，结束时恢复偏好。

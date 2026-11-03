@@ -5,8 +5,17 @@ import YuguangCore
 @MainActor @Observable
 final class AppModel {
     let forum = ForumModel()
+    var statsHome = false
+    var statsPlayers: [PlayerGameStats] = []
+    var statsError: String?
+    var statsLoading = false
+    @ObservationIgnored var statsRequestID = UUID()
+    var statsRefresh = 0
+    var showingStats = false { didSet { if showingStats != oldValue { onWindowChange?() } } }
+    func openStats() { showingForum = false; showingStats = true; page = .live }
     var showingForum = false { didSet { if showingForum != oldValue { onWindowChange?() } } }
     func selectBoard(_ board: ForumBoard) {
+        showingStats = false
         forum.choose(board); showingForum = true; page = .forum
     }
     let service: any LiveService
@@ -68,7 +77,7 @@ final class AppModel {
     var compactRows = min(6, max(1, UserDefaults.standard.object(forKey: "compactRows") as? Int ?? 1)) {
         didSet { compactHistory.scroll(0, live: entries, visibleRows: max(1, compactRows - 1)); UserDefaults.standard.set(compactRows, forKey: "compactRows"); onWindowChange?() }
     }
-    var compactHeight: CGFloat { CGFloat(compactRows + (showingForum ? 1 : 0)) * 32 }
+    var compactHeight: CGFloat { CGFloat((showingStats ? max(3, compactRows) : compactRows) + (showingForum || showingStats ? 1 : 0)) * 32 }
     var compactHovered = false {
         didSet { if compactHovered != oldValue { onWindowChange?() } }
     }
@@ -167,6 +176,7 @@ final class AppModel {
         }
     }
     func select(_ match: Match) {
+        showingStats = false
         showingForum = false
         if selectedMatch?.id == match.id { page = .live; return }
         polling?.cancel(); selectionGeneration += 1

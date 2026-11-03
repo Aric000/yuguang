@@ -48,6 +48,7 @@ struct ForumView: View {
                     if forum.board?.path == "/502" {
                         Menu {
                             Toggle("只看主队新闻", isOn: $model.onlyFavoriteNews)
+                            Button("更改我的主队…", action: model.beginTeamSelection)
                             Text(model.favoriteTeams.isEmpty ? "尚未选择主队" : model.favoriteTeams.sorted().joined(separator: "、"))
                             if forum.unavailableNews > 0 { Text("\(forum.unavailableNews) 条资讯暂无法识别，刷新可重试") }
                         } label: {
@@ -111,8 +112,7 @@ struct ForumView: View {
                     }
                     if forum.needsFavoriteTeams {
                         Button("先设置我的主队") {
-                            if model.compact { model.onToggleCompact?() }
-                            model.page = .settings
+                            model.beginTeamSelection()
                         }.buttonStyle(.plain).foregroundStyle(secondary).frame(height: 32)
                     } else if let error = forum.error {
                         Button { forum.loadMore() } label: { Label("加载失败，点击重试", systemImage: "arrow.clockwise") }

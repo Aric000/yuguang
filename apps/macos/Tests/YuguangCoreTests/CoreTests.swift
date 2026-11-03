@@ -3,6 +3,23 @@ import Foundation
 @testable import YuguangCore
 
 struct CoreTests {
+    @Test func playerStatsKeepsMissingValuesAndSignedPlusMinus() throws {
+        let json = #"{"success":true,"result":{"players":[{"stats":{"playerId":1901000000443369,"name":"球员","pts":25,"reb":13,"asts":1,"plusMinus":"+13"}},{"stats":null}]}}"#
+        let result = try HupuAPI.decode(PlayerStatsResponse.self, from: Data(json.utf8))
+        #expect(result.players.count == 2)
+        #expect(result.players[0].stats?.id == "1901000000443369")
+        #expect(result.players[0].stats?.pts == 25)
+        #expect(result.players[0].stats?.plusMinus == "+13")
+        #expect(result.players[0].stats?.mins == nil)
+        #expect(result.players[1].stats == nil)
+    }
+
+    @Test func matchTeamIDsAcceptStringsAndIntegers() throws {
+        let json = #"{"matchId":"1","matchStatus":"COMPLETED","homeTeamName":"湖人","awayTeamName":"骑士","homeTeamId":1901000000501283,"awayTeamId":"1901000000501334"}"#
+        let match = try JSONDecoder().decode(Match.self, from: Data(json.utf8))
+        #expect(match.homeTeamId == "1901000000501283")
+        #expect(match.awayTeamId == "1901000000501334")
+    }
     @Test func compactHistoryKeepsPositionAcrossNewBatches() {
         let original = (0..<5).map { LiveEntry(id: "\($0)", content: "message \($0)", time: "", nickName: "") }
         var history = CompactHistory()

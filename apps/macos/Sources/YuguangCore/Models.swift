@@ -2,6 +2,8 @@ import Foundation
 
 public struct Match: Decodable, Identifiable, Hashable, Sendable {
     public let matchId: String
+    public let homeTeamId: String?
+    public let awayTeamId: String?
     public var matchStatus: String
     public let homeTeamName: String
     public let awayTeamName: String
@@ -35,6 +37,7 @@ public struct Match: Decodable, Identifiable, Hashable, Sendable {
     }
     public init(matchId: String, matchStatus: String, homeTeamName: String, awayTeamName: String,
                 homeScore: Int? = nil, awayScore: Int? = nil, matchTime: String = "", status: String? = nil) {
+        self.homeTeamId = nil; self.awayTeamId = nil
         self.matchId = matchId; self.matchStatus = matchStatus
         self.homeTeamName = homeTeamName; self.awayTeamName = awayTeamName
         self.homeScore = homeScore; self.awayScore = awayScore; self.matchTime = matchTime
@@ -44,11 +47,13 @@ public struct Match: Decodable, Identifiable, Hashable, Sendable {
         self.homeTeamNightColor = nil; self.awayTeamNightColor = nil; self.competitionStageDesc = nil
     }
     enum CodingKeys: String, CodingKey {
-        case matchId, matchStatus, homeTeamName, awayTeamName, homeScore, awayScore, matchTime, frontEndMatchStatus, openLive
+        case homeTeamId, awayTeamId, matchId, matchStatus, homeTeamName, awayTeamName, homeScore, awayScore, matchTime, frontEndMatchStatus, openLive
         case homeTeamLogo, awayTeamLogo, homeTeamDayColor, awayTeamDayColor, homeTeamNightColor, awayTeamNightColor, competitionStageDesc
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        homeTeamId = try? c.stringOrInteger(.homeTeamId)
+        awayTeamId = try? c.stringOrInteger(.awayTeamId)
         matchId = try c.stringOrInteger(.matchId)
         matchStatus = try c.decode(String.self, forKey: .matchStatus)
         homeTeamName = try c.decode(String.self, forKey: .homeTeamName)

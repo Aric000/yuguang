@@ -23,7 +23,7 @@ final class LivePanel: NSPanel {
     private var diagnosticPreferences: [String: Any]?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if CommandLine.arguments.contains("--self-test") || CommandLine.arguments.contains("--capture") || CommandLine.arguments.contains("--forum-capture") {
+        if CommandLine.arguments.contains("--self-test") || CommandLine.arguments.contains("--capture") || CommandLine.arguments.contains("--forum-capture") || CommandLine.arguments.contains("--stats-capture") {
             diagnosticPreferences = Dictionary(uniqueKeysWithValues: diagnosticKeys.compactMap { key in
                 UserDefaults.standard.object(forKey: key).map { (key, $0) }
             })
@@ -74,7 +74,7 @@ final class LivePanel: NSPanel {
         if model.simpleModeEnabled { toggleCompact() }
         show()
         let forumPreview = CommandLine.arguments.contains("--forum-preview") || CommandLine.arguments.contains("--forum-capture")
-        if !demo && !CommandLine.arguments.contains("--forum-capture") { model.start() }
+        if !demo && !CommandLine.arguments.contains("--forum-capture") && !CommandLine.arguments.contains("--stats-capture") { model.start() }
         if forumPreview, let board = ForumBoard.catalog.first(where: { $0.path == "/502" }) {
             model.selectBoard(board)
             if !model.compact { toggleCompact() }
@@ -82,6 +82,13 @@ final class LivePanel: NSPanel {
         if let index = CommandLine.arguments.firstIndex(of: "--forum-capture"), CommandLine.arguments.count > index + 1 {
             let directory = CommandLine.arguments[index + 1]
             Task { [weak self] in await self?.captureForum(to: directory); NSApp.terminate(nil) }
+        }
+        if let index = CommandLine.arguments.firstIndex(of: "--stats-capture"), CommandLine.arguments.count > index + 1 {
+            let directory = CommandLine.arguments[index + 1]
+            Task { [weak self] in
+                await self?.captureStats(to: directory)
+                NSApp.terminate(nil)
+            }
         }
         if CommandLine.arguments.contains("--self-test") {
             Task { [weak self] in
@@ -355,6 +362,12 @@ final class LivePanel: NSPanel {
         model.showingForum = false
         check(panel.frame.height == 128, "Returning to live restores the live row height")
         toggleCompact()
+        model.compactRows = 1
+        toggleCompact()
+        model.openStats()
+        check(model.compact && model.showingStats && panel.frame.height == 128, "Statistics reserves a toolbar and at least three rows in compact mode")
+        model.showingStats = false
+        check(panel.frame.height == 32, "Returning from statistics restores live height")
         print("Window checks complete")
         model.compactRows = preferredRows
         model.simpleModeEnabled = preferredSimpleMode
@@ -408,6 +421,13 @@ final class LivePanel: NSPanel {
             print("UI 返回位置：\(listPosition == model.forum.scrollID ? "保持" : "已改变")")
         }
         model.compactHovered = false; await settle(); model.compactHovered = false; capture("forum-transparent")
+        model.beginTeamSelection()
+        await settle()
+        if let sheet = panel?.attachedSheet {
+            capture("favorite-picker-compact", window: sheet)
+            print("UI 精简模式主队独立弹窗：已显示")
+        } else { print("FAIL: 精简模式主队弹窗未显示") }
+        model.cancelTeamSelection(); await settle()
         model.onlyFavoriteNews = false
         model.favoriteTeams = ["湖人", "骑士"]
         if model.compact { toggleCompact() }
@@ -420,6 +440,48 @@ final class LivePanel: NSPanel {
             print("UI 主队独立弹窗：已显示")
         } else { print("FAIL: 主队弹窗未显示") }
         model.cancelTeamSelection(); await settle()
+    }
+
+    private func captureStats(to directory: String) async {
+        guard let panel else { return }
+        func check(_ value: Bool, _ title: String) {
+            print("\(value ? "PASS" : "FAIL"): \(title)")
+        }
+        func capture(_ name: String) {
+            guard let view = panel.contentView else { return }
+            view.layoutSubtreeIfNeeded()
+            guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds),
+                  let _ = try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true) else { return }
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            if let data = bitmap.representation(using: .png, properties: [:]) {
+                try? data.write(to: URL(fileURLWithPath: directory).appendingPathComponent(name + ".png"))
+            }
+        }
+        await model.refreshSchedule()
+        guard let match = model.allMatches.first(where: \.isLive) ?? model.allMatches.first(where: \.isFinished) else {
+            check(false, "No match available for statistics capture"); return
+        }
+        model.select(match)
+        if !model.compact { toggleCompact() }
+        model.compactRows = 3; model.openStats()
+        for home in [false, true] {
+            model.statsHome = home
+            try? await Task.sleep(for: .milliseconds(200))
+            let deadline = Date(timeIntervalSinceNow: 18)
+            while (model.statsLoading || model.statsPlayers.isEmpty) && Date() < deadline && model.statsError == nil {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            check(!model.statsPlayers.isEmpty && model.statsError == nil, "Real \(home ? "home" : "away") statistics: \(model.statsPlayers.count) players")
+            for theme in ["light", "dark"] {
+                model.theme = theme; model.compactHovered = true
+                try? await Task.sleep(for: .milliseconds(200))
+                model.compactHovered = true
+                capture("stats-\(home ? "home" : "away")-\(theme)")
+            }
+        }
+        model.showingStats = false
+        check(model.compact && panel.frame.height == 96, "Statistics returns to three-row compact live view")
+        model.stop()
     }
 
     private func captureAll(to directory: String) {
@@ -470,6 +532,14 @@ final class LivePanel: NSPanel {
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2)); capture("compact-multiline")
         model.compactHovered = false
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2)); capture("compact-multiline-transparent")
+        model.openStats()
+        let sample = #"{"players":[{"stats":{"playerId":"sample","name":"演示球员","mins":"34:19","pts":25,"reb":13,"asts":1,"stl":1,"blk":1,"plusMinus":"+13"}}]}"#
+        model.statsPlayers = (try? JSONDecoder().decode(PlayerStatsResponse.self, from: Data(sample.utf8)))?.players.compactMap(\.stats) ?? []
+        model.compactHovered = true
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2)); capture("compact-stats-light")
+        model.theme = "dark"
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2)); capture("compact-stats-dark")
+        model.showingStats = false
         model.compactRows = preferredRows
         model.theme = preferredTheme
         model.simpleModeEnabled = preferredSimpleMode
