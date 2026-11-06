@@ -20,6 +20,27 @@
 - **更纯粹的精简模式**：设置中启用后，启动即为精简窗口，并隐藏球队 Logo；临时展开也保留这一偏好。
 - **尊重专注**：没有声音、推送或账户注册。网络异常保留已获取内容，界面明确显示连接状态；演示数据仅在显式诊断模式使用。
 
+## 界面预览
+
+<table>
+<tr>
+<td align="center"><img src="docs/screenshots/macos-original/live-light.png" width="360" alt="雾白主题完整赛事窗口" /><br/>雾白 · 完整赛事窗口</td>
+<td align="center"><img src="docs/screenshots/macos-original/live-dark.png" width="360" alt="炭黑主题完整赛事窗口" /><br/>炭黑 · 完整赛事窗口</td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/macos-original/compact.png" width="360" alt="单行精简窗口" /><br/>单行精简窗口</td>
+<td align="center"><img src="docs/screenshots/macos-original/compact-multiline.png" width="360" alt="多行精简窗口" /><br/>多行精简窗口</td>
+</tr>
+</table>
+
+截图来自早期 macOS 原生客户端，比分和解说为演示数据。
+
+## 宣传演示
+
+[<img src="docs/demo/yuguang-promo-cover.png" width="720" alt="余光宣传演示封面，点击打开视频" />](docs/demo/yuguang-promo.mp4)
+
+[打开宣传演示（32 秒，1080p MP4）](docs/demo/yuguang-promo.mp4)。影片展示 macOS v0.3.0 的直播窗口、精简模式和社区浏览。
+
 ## Mac：让资讯，也留在余光里
 
 精简模式下点击 `⇄ → 主队新闻列表`，可直接打开所选球队的新闻；`⇄ → 更改我的主队…` 可直接打开多选弹窗。点击 `⇄ → 社区板块`，可进入篮球资讯、主队专区、步行街等公开板块，保持精简窗口浏览。
