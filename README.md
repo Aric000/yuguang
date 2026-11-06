@@ -3,7 +3,7 @@
 <h1>余光 · Yuguang</h1>
 <p><strong>使用余光关注比赛，一边用 AI 编程，一边观看比赛。</strong></p>
 <p>给热爱篮球，也专注创造的你。一扇安静、轻巧的文字直播窗口，让比赛留在视野边缘。</p>
-<p><a href="https://github.com/Aric000/yuguang/releases">下载安装包</a> · <a href="docs/API.md">数据接口</a> · <a href="docs/CROSS_PLATFORM.md">双端架构</a></p>
+<p><a href="https://github.com/Aric000/yuguang/releases/latest">下载最新版</a> · <a href="#界面预览">界面预览</a> · <a href="#宣传演示">宣传演示</a> · <a href="docs/API.md">数据接口</a> · <a href="docs/CROSS_PLATFORM.md">双端架构</a></p>
 </div>
 
 ## 让比赛，恰到好处地出现
