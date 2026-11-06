@@ -206,7 +206,7 @@ public sealed class MainWindow : Window
         body.Children.Add(Text("外观", 12, muted)); var themes = new ComboBox { ItemsSource = new[] { "跟随系统", "浅色", "深色" }, SelectedIndex = session.State.Settings.Theme == "light" ? 1 : session.State.Settings.Theme == "dark" ? 2 : 0, Margin = new Thickness(0, 8, 0, 14) }; themes.SelectionChanged += (_, _) => { var value = themes.SelectedIndex == 1 ? "light" : themes.SelectedIndex == 2 ? "dark" : "system"; if (value != session.State.Settings.Theme) session.UpdateSettings(session.State.Settings with { Theme = value }); }; body.Children.Add(themes);
         body.Children.Add(Text("全局显示 / 隐藏快捷键", 12, muted)); body.Children.Add(Button(recording ? "按下组合键… Esc 取消" : session.State.Settings.ShortcutLabel + " · 点击录制", () => { recording = true; Render(); Focus(); }));
         body.Children.Add(Text(shortcutError, 11, Color(Accent))); body.Children.Add(Text(session.State.PreferencesError, 11, Color(Accent)));
-        var note = Text("鼠标移开精简窗口后，边框和控件自动隐去。\n双击文字展开；右上角 ⇄ 可直接切换比赛。\n\n余光 0.4.0 · Windows 原生版\n一边用 AI 编程，一边观看比赛。", 12, muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 25, 0, 0); body.Children.Add(note);
+        var note = Text("鼠标移开精简窗口后，边框和控件自动隐去。\n双击文字展开；右上角 ⇄ 可直接切换比赛。\n\n余光 0.4.1 · Windows 原生版\n一边用 AI 编程，一边观看比赛。", 12, muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 25, 0, 0); body.Children.Add(note);
         root.RowDefinitions.Add(new RowDefinition()); var scroll = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; Grid.SetRow(scroll, root.RowDefinitions.Count - 1); root.Children.Add(scroll);
     }
     private void ApplyHover()

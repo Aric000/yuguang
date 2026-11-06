@@ -13,3 +13,7 @@
 赛程、比分和文字直播由虎扑相关服务提供，接口说明见 [docs/API.md](docs/API.md)。本项目的 MIT 许可不授权第三方赛事数据、文字内容、商标或服务的使用权。
 
 接口调用思路参考 [hupumoyu-assistant](https://github.com/chenyaoyi88/hupumoyu-assistant)，客户端代码独立实现。
+
+## GitHub 标志
+
+设置中的 Invertocat 标志来自 [GitHub Brand Toolkit](https://brand.github.com/foundations/logo)，用于链接到余光的 GitHub 仓库。标志归 GitHub, Inc. 所有。

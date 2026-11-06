@@ -395,8 +395,31 @@ struct RootView: View {
                 }
                 VStack(alignment: .leading, spacing: 7) {
                     Text("安静地看一场球。").font(.system(size: 14, weight: .medium))
-                    Text("余光 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.0") · NBA 文字直播\n无声音、无推送、不抢输入焦点。\n数据由虎扑提供，可能存在延迟。")
+                    Text("NBA 文字直播\n无声音、无推送、不抢输入焦点。\n数据由虎扑提供，可能存在延迟。")
                         .font(.system(size: 12)).lineSpacing(4).foregroundStyle(p.secondary)
+                    if let repository = URL(string: "https://github.com/Aric000/yuguang") {
+                        Link(destination: repository) {
+                            HStack(spacing: 5) {
+                                let mark = scheme == .dark ? "GitHubMarkWhite" : "GitHubMarkBlack"
+                                if let url = AppResources.bundle.url(forResource: mark, withExtension: "png"),
+                                   let image = NSImage(contentsOf: url) {
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 12, height: 12)
+                                        .accessibilityHidden(true)
+                                }
+                                Text("GitHub")
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 12, weight: .medium))
+                        .help("打开余光的 GitHub 仓库")
+                    }
+                    Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.1")")
+                        .font(.system(size: 11)).foregroundStyle(p.secondary)
                 }.padding(.top, 4)
             }.padding(20)
         }

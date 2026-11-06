@@ -75,6 +75,7 @@
 1. 启动余光，从比赛日和球队筛选中选择赛事。
 2. 展开窗口看完整文字动态，点击球队名称旁的星标关注球队。
 3. 点击 `—` 进入精简窗口；在偏好设置调整行数、主题、置顶和快捷键。
+   macOS 版偏好设置最下方显示当前版本，也可从这里打开余光的 GitHub 仓库。
 4. 拖动标题区域或精简窗口文字放到合适位置。鼠标移开后，背景自动透明。
 5. 点击 `⇄` 换比赛；按 `Ctrl + \`` 隐藏／恢复。退出请使用菜单栏／托盘的「退出余光」。
 
@@ -93,7 +94,7 @@ Mac 需要 macOS、Swift 6+（Xcode 或 Command Line Tools）：
 
 ```bash
 bash scripts/test-macos.sh
-bash scripts/build-macos.sh 0.4.0
+bash scripts/build-macos.sh 0.4.1
 apps/macos/dist/余光.app/Contents/MacOS/Yuguang --demo --self-test
 ```
 
@@ -101,12 +102,12 @@ Windows 需要 .NET 10 SDK；制作安装程序还需要 Inno Setup 6：
 
 ```powershell
 ./scripts/test-windows.ps1
-./scripts/build-windows.ps1 -Version 0.4.0
+./scripts/build-windows.ps1 -Version 0.4.1
 ```
 
 安装包输出到仓库根目录 `release/`。Windows 核心逻辑可在 Mac 上执行 `dotnet run --project apps/windows/Yuguang.Tests`；WPF 的实际窗口诊断在 Windows 上运行。`--demo --self-test` 为明确标识的测试数据，结束时会恢复用户偏好。Mac 社区状态检查使用 `--check-forum-model`；真实网页连通性可用 `--check-forum` 抽查。
 
-推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.4.0` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
+推送到 `main` 会构建两个平台并保存 Actions Artifacts；发布形如 `v0.4.1` 的 GitHub Release 后，工作流重新测试、打包并自动上传安装包。
 
 ## 项目发布 Skill
 

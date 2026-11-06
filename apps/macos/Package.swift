@@ -7,7 +7,11 @@ let package = Package(
     products: [.executable(name: "Yuguang", targets: ["Yuguang"])],
     targets: [
         .target(name: "YuguangCore"),
-        .executableTarget(name: "Yuguang", dependencies: ["YuguangCore"], resources: [.copy("Resources/Teams")]),
+        .executableTarget(
+            name: "Yuguang",
+            dependencies: ["YuguangCore"],
+            resources: [.copy("Resources/Teams"), .process("Resources/GitHub")]
+        ),
         .testTarget(name: "YuguangCoreTests", dependencies: ["YuguangCore"])
     ]
 )

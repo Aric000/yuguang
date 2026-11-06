@@ -9,20 +9,23 @@ struct TeamIdentity: Decodable {
     let nightColor: String?
 }
 
-@MainActor enum TeamAssets {
+enum AppResources {
     static let bundle: Bundle = {
         if let url = Bundle.main.resourceURL?.appendingPathComponent("Yuguang_Yuguang.bundle"), let bundle = Bundle(url: url) { return bundle }
         return Bundle.module
     }()
+}
+
+@MainActor enum TeamAssets {
     static let catalog: [String: TeamIdentity] = {
-        guard let url = bundle.url(forResource: "catalog", withExtension: "json", subdirectory: "Teams"),
+        guard let url = AppResources.bundle.url(forResource: "catalog", withExtension: "json", subdirectory: "Teams"),
               let data = try? Data(contentsOf: url), let catalog = try? JSONDecoder().decode([String: TeamIdentity].self, from: data) else { return [:] }
         return catalog
     }()
     private static let images = NSCache<NSString, NSImage>()
     static func image(_ name: String) -> NSImage? {
         if let image = images.object(forKey: name as NSString) { return image }
-        guard let url = bundle.url(forResource: name, withExtension: "png", subdirectory: "Teams"), let image = NSImage(contentsOf: url) else { return nil }
+        guard let url = AppResources.bundle.url(forResource: name, withExtension: "png", subdirectory: "Teams"), let image = NSImage(contentsOf: url) else { return nil }
         images.setObject(image, forKey: name as NSString); return image
     }
     static func color(name: String, hex: String? = nil, dark: Bool = false) -> Color {
