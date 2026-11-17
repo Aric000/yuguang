@@ -89,6 +89,38 @@ import YuguangCore
         try check(Set(scrolling.topics.map(\.id)).count == scrolling.topics.count,
                   "连续自动加载时重叠帖子仍去重")
         scrolling.stop()
+        let challenged = ForumModel(service: VerificationForumFixture(), favoriteTeams: ["湖人"], onlyFavoriteNews: true)
+        challenged.choose(news)
+        while challenged.loading { try? await Task.sleep(for: .milliseconds(10)) }
+        challenged.updateListBoundary(nearEnd: true)
+        try? await Task.sleep(for: .milliseconds(200))
+        try check(challenged.verificationRequired && challenged.processedNews == 0 && challenged.topics.isEmpty,
+                  "正文验证码中止筛选并保留待处理批次，不误判为无主队匹配")
+        try check(challenged.error != nil && !challenged.loading, "验证码期间停止底部自动重试")
+        challenged.loadMore()
+        let retryDeadline = Date(timeIntervalSinceNow: 3)
+        while (challenged.loading || challenged.hasMore) && challenged.error == nil && Date() < retryDeadline {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        try check(!challenged.verificationRequired && challenged.topics.count == 24 && challenged.processedNews == 24,
+                  "验证后重试从保留批次恢复，继续加载无重复")
+        challenged.stop()
+        let commentRetry = ForumModel(service: CommentVerificationFixture(), favoriteTeams: [], onlyFavoriteNews: false)
+        commentRetry.choose(news)
+        while commentRetry.loading { try? await Task.sleep(for: .milliseconds(10)) }
+        if let topic = commentRetry.topics.first {
+            commentRetry.open(topic)
+            while commentRetry.detailLoading { try? await Task.sleep(for: .milliseconds(10)) }
+            commentRetry.fetchDetail(page: 2)
+            while commentRetry.detailLoading { try? await Task.sleep(for: .milliseconds(10)) }
+            try check(commentRetry.detailVerificationRequired && commentRetry.detail?.current == 1 && commentRetry.detail?.comments.count == 1,
+                      "更多评论遇到验证码时保留正文和已有评论，并提供验证状态")
+            commentRetry.fetchDetail(page: 2)
+            while commentRetry.detailLoading { try? await Task.sleep(for: .milliseconds(10)) }
+            try check(!commentRetry.detailVerificationRequired && commentRetry.detail?.current == 2 && commentRetry.detail?.comments.count == 2,
+                      "评论页验证重试后追加成功，原有评论不丢失")
+        } else { try check(false, "评论验证测试需要来源帖子") }
+        commentRetry.stop()
         UserDefaults.standard.removeObject(forKey: "onlyFavoriteNews")
         let settings = AppModel()
         try check(settings.onlyFavoriteNews, "首次使用默认只看主队新闻")
@@ -149,4 +181,26 @@ private struct ScrollNewsFixture: ForumService {
         return number <= 12 || number >= 49 ? "湖人比赛" : "热火比赛"
     }
     func detail(id: String, page: Int) async throws -> ForumDetail { throw ForumError.changedPage }
+}
+
+private actor VerificationForumFixture: ForumService {
+    private var challenged = false
+    func topics(board: ForumBoard, page: Int) async throws -> ForumPage { try await BatchNewsFixture().topics(board: board, page: page) }
+    func newsBody(id: String) async throws -> String {
+        if !challenged { challenged = true; throw ForumError.verificationRequired }
+        return "湖人比赛"
+    }
+    func detail(id: String, page: Int) async throws -> ForumDetail { throw ForumError.verificationRequired }
+}
+
+private actor CommentVerificationFixture: ForumService {
+    private var challenged = false
+    func topics(board: ForumBoard, page: Int) async throws -> ForumPage { try await BatchNewsFixture().topics(board: board, page: page) }
+    func detail(id: String, page: Int) async throws -> ForumDetail {
+        if page == 2 && !challenged { challenged = true; throw ForumError.verificationRequired }
+        let root: [String: Any] = ["detail": ["thread": ["title": "fixture", "content": "body"],
+            "replies": ["current": page, "total": 2, "list": [["pid": "\(page)", "content": "reply", "allLightCount": page]]]]]
+        let json = try JSONSerialization.data(withJSONObject: root)
+        return try HupuForum.parseDetail("<script>window.$$data=\(String(decoding: json, as: UTF8.self))</script>")
+    }
 }

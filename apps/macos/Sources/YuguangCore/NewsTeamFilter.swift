@@ -31,6 +31,7 @@ public extension ForumService {
                     try Task.checkCancellation()
                     if NewsTeamFilter.matches(topic.title, teams: teams) { return (index, true, false) }
                     do { return (index, NewsTeamFilter.matches(try await newsBody(id: topic.id), teams: teams), false) }
+                    catch ForumError.verificationRequired { throw ForumError.verificationRequired }
                     catch { try Task.checkCancellation(); return (index, false, true) }
                 }
             }

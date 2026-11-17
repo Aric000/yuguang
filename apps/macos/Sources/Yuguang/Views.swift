@@ -418,7 +418,7 @@ struct RootView: View {
                         .font(.system(size: 12, weight: .medium))
                         .help("打开余光的 GitHub 仓库")
                     }
-                    Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.1")")
+                    Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.5.0")")
                         .font(.system(size: 11)).foregroundStyle(p.secondary)
                 }.padding(.top, 4)
             }.padding(20)

@@ -50,10 +50,11 @@ public struct ForumDetail: Sendable {
     }
 }
 public enum ForumError: LocalizedError {
-    case changedPage, invalidPath, unavailable(Int)
+    case changedPage, verificationRequired, invalidPath, unavailable(Int)
     public var errorDescription: String? {
         switch self {
         case .changedPage: "虎扑页面结构发生变化，或暂时需要验证。请稍后刷新，或在浏览器查看原帖。"
+        case .verificationRequired: "虎扑需要安全验证，请完成验证后重试。"
         case .invalidPath: "无效的虎扑地址"
         case .unavailable(let code): "虎扑暂时无法访问（HTTP \(code)），请稍后重试。"
         }
@@ -66,7 +67,8 @@ public protocol ForumService: Sendable {
 }
 /// Reads the same public SSR data as bbs.hupu.com; no private API or login credentials.
 public struct HupuForum: ForumService {
-    public init() {}
+    private let pageLoader: (@Sendable (URL) async throws -> String)?
+    public init(pageLoader: (@Sendable (URL) async throws -> String)? = nil) { self.pageLoader = pageLoader }
     public func topics(board: ForumBoard, page: Int) async throws -> ForumPage {
         let suffix = page > 1 ? "-\(page)" : ""
         return try Self.parseTopics(await fetch(path: board.path + "-postdate" + suffix))
@@ -84,6 +86,11 @@ public struct HupuForum: ForumService {
     private func fetch(path: String) async throws -> String {
         guard path.range(of: #"^/[A-Za-z0-9_-]+(?:\.html)?$"#, options: .regularExpression) != nil,
               let url = URL(string: "https://bbs.hupu.com" + path) else { throw ForumError.invalidPath }
+        if let pageLoader { return try await pageLoader(url) }
+        return try await Self.fetchPage(url: url)
+    }
+    public static func fetchPage(url: URL) async throws -> String {
+        guard url.scheme == "https", url.host == "bbs.hupu.com" else { throw ForumError.invalidPath }
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
         request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -101,6 +108,10 @@ public struct HupuForum: ForumService {
            let end = html.range(of: "</script>", range: marker.upperBound..<html.endIndex),
            let root = try JSONSerialization.jsonObject(with: Data(html[marker.upperBound..<end.lowerBound].utf8)) as? [String: Any],
            let props = root["props"] as? [String: Any], let page = props["pageProps"] as? [String: Any] { return page }
+        // Inspect markup only: post text mentioning verification is not a challenge.
+        if html.range(of: #"<meta\s+[^>]*name=["']aliyun_waf_(?:aa|bb)["']"#, options: [.regularExpression, .caseInsensitive]) != nil {
+            throw ForumError.verificationRequired
+        }
         throw ForumError.changedPage
     }
     private static func balancedObject(_ source: Substring) -> String? {

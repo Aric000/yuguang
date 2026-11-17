@@ -47,4 +47,27 @@ struct ForumTests {
         #expect(detail.comments.map(\.likes) == [42, 25, 0, 0])
     }
 
+    @Test func wafChallengeHasActionableError() throws {
+        for html in ["<meta name=\"aliyun_waf_aa\" content=\"sample\">", "<META content='sample' NAME='aliyun_waf_bb'>"] {
+            #expect(throws: ForumError.self) { try HupuForum.parseTopics(html) }
+            do { _ = try HupuForum.parseDetail(html); Issue.record("Expected verification") }
+            catch ForumError.verificationRequired { }
+        }
+        // A normal post can discuss verification without blocking the feed.
+        let html = "<script>window.$$data={\"topic\":{\"threads\":{\"current\":1,\"total\":1,\"list\":[\(topic)]}}}</script>"
+        #expect(try HupuForum.parseTopics(html).topics.count == 1)
+    }
+    @Test func bodyChallengeStopsFilteringInsteadOfDiscardingNews() async throws {
+        let page = try HupuForum.parseTopics("<script>window.$$data={\"topic\":{\"threads\":{\"current\":1,\"total\":1,\"list\":[\(topic)]}}}</script>")
+        do {
+            _ = try await ChallengedForumService().filterNews(page.topics, teams: ["湖人"])
+            Issue.record("Expected verification to propagate")
+        } catch ForumError.verificationRequired { }
+    }
+
+}
+
+private struct ChallengedForumService: ForumService {
+    func topics(board: ForumBoard, page: Int) async throws -> ForumPage { throw ForumError.verificationRequired }
+    func detail(id: String, page: Int) async throws -> ForumDetail { throw ForumError.verificationRequired }
 }

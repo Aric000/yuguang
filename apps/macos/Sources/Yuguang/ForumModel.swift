@@ -24,6 +24,8 @@ final class ForumModel {
     var sort = Sort.latest
     var loading = false
     var error: String?
+    var verificationRequired = false
+    var detailVerificationRequired = false
     var current = 0
     var total = 1
     var scrollID: String?
@@ -56,8 +58,9 @@ final class ForumModel {
     @ObservationIgnored private var detailTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var detailGeneration = 0
+    private var detailRetryPage = 1
     private var recentReads = UserDefaults.standard.stringArray(forKey: "forumReadIDs") ?? []
-    init(service: any ForumService = HupuForum(), favoriteTeams: Set<String>? = nil, onlyFavoriteNews: Bool? = nil) {
+    init(service: any ForumService = HupuForum(pageLoader: { url in try await ForumWebSession.shared.fetch(url) }), favoriteTeams: Set<String>? = nil, onlyFavoriteNews: Bool? = nil) {
         self.service = service
         self.favoriteTeams = favoriteTeams ?? Set(UserDefaults.standard.stringArray(forKey: "favoriteTeams") ?? [])
         self.onlyFavoriteNews = onlyFavoriteNews ?? (UserDefaults.standard.object(forKey: "onlyFavoriteNews") as? Bool ?? true)
@@ -79,7 +82,7 @@ final class ForumModel {
     }
     func loadMore() {
         guard let board, !loading, hasMore, !needsFavoriteTeams else { return }
-        loading = true; error = nil
+        loading = true; error = nil; verificationRequired = false
         let ticket = generation, next = current + 1
         let filter = filteringNews, teams = favoriteTeams
         listTask = Task { [weak self] in
@@ -112,7 +115,21 @@ final class ForumModel {
             } catch {
                 guard !Task.isCancelled, ticket == generation else { return }
                 self.error = error.localizedDescription
+                if case ForumError.verificationRequired = error { verificationRequired = true }
             }
+        }
+    }
+    func beginVerification() {
+        let path = selected.map { "/\($0.id).html" } ?? ((board?.path ?? "/502") + "-postdate")
+        guard let url = URL(string: "https://bbs.hupu.com" + path) else { return }
+        let ticket = generation, detailTicket = detailGeneration
+        let selectedID = selected?.id, retryPage = detailRetryPage
+        ForumWebSession.shared.showVerification(url: url) { [weak self] in
+            guard let self, generation == ticket, selected?.id == selectedID else { return }
+            if selectedID != nil {
+                guard detailGeneration == detailTicket else { return }
+                fetchDetail(page: retryPage)
+            } else { loadMore() }
         }
     }
     func open(_ topic: ForumTopic) {
@@ -121,8 +138,9 @@ final class ForumModel {
     func fetchDetail(page: Int) {
         guard let topic = selected else { return }
         detailTask?.cancel(); detailGeneration += 1
+        detailRetryPage = page
         let ticket = detailGeneration
-        detailLoading = true; detailError = nil
+        detailLoading = true; detailError = nil; detailVerificationRequired = false
         detailTask = Task { [weak self] in
             guard let self else { return }
             defer { if ticket == detailGeneration { detailLoading = false } }
@@ -140,6 +158,7 @@ final class ForumModel {
             } catch {
                 guard !Task.isCancelled, ticket == detailGeneration else { return }
                 detailError = error.localizedDescription
+                if case ForumError.verificationRequired = error { detailVerificationRequired = true }
             }
         }
     }

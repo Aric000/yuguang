@@ -79,6 +79,9 @@ struct ForumView: View {
                                 .disabled(detail.current >= detail.total || forum.detailLoading)
                             Text("已读取 \(detail.current) / \(detail.total) 页")
                             if let error = forum.detailError { Text(error) }
+                            if forum.detailVerificationRequired {
+                                Button("打开虎扑验证", action: forum.beginVerification)
+                            }
                         } label: { Image(systemName: "text.bubble") }
                         .menuStyle(.borderlessButton).fixedSize().help("按高亮数排序 · 已加载 \(detail.comments.count) 条评论")
                     }
@@ -115,7 +118,9 @@ struct ForumView: View {
                             model.beginTeamSelection()
                         }.buttonStyle(.plain).foregroundStyle(secondary).frame(height: 32)
                     } else if let error = forum.error {
-                        Button { forum.loadMore() } label: { Label("加载失败，点击重试", systemImage: "arrow.clockwise") }
+                        Button {
+                            if forum.verificationRequired { forum.beginVerification() } else { forum.loadMore() }
+                        } label: { Label(forum.verificationRequired ? "虎扑需要验证，点击处理" : "加载失败，点击重试", systemImage: forum.verificationRequired ? "checkmark.shield" : "arrow.clockwise") }
                             .buttonStyle(.plain).frame(height: 32).help(error)
                     } else if forum.hasMore {
                         Button { forum.loadMore() } label: {
@@ -153,7 +158,9 @@ struct ForumView: View {
         } else {
             VStack(spacing: 6) {
                 Text(forum.detailError ?? "无法读取帖子").lineLimit(2).foregroundStyle(secondary)
-                Button("重试") { forum.fetchDetail(page: 1) }
+                Button(forum.detailVerificationRequired ? "打开虎扑验证" : "重试") {
+                    if forum.detailVerificationRequired { forum.beginVerification() } else { forum.fetchDetail(page: 1) }
+                }
             }.padding(.horizontal, 12)
         }
     }
